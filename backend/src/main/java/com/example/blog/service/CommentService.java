@@ -1,0 +1,46 @@
+package com.example.blog.service;
+
+import com.example.blog.model.Comment;
+import com.example.blog.model.Post;
+import com.example.blog.model.User;
+import com.example.blog.repository.CommentRepository;
+import com.example.blog.repository.PostRepository;
+import com.example.blog.repository.UserRepository;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+
+@Service
+public class CommentService {
+    private final CommentRepository commentRepository;
+    private final PostRepository postRepository;
+    private final UserRepository userRepository;
+
+    public CommentService(CommentRepository commentRepository, PostRepository postRepository, UserRepository userRepository) {
+        this.commentRepository = commentRepository;
+        this.postRepository = postRepository;
+        this.userRepository = userRepository;
+    }
+
+    public List<Comment> listByPost(Long postId) {
+        return commentRepository.findByPostId(postId);
+    }
+
+    public Comment add(Long postId, Long userId, String content) {
+        Post post = postRepository.findById(postId).orElseThrow();
+        User author = userRepository.findById(userId).orElseThrow();
+        Comment c = new Comment();
+        c.setContent(content);
+        c.setPost(post);
+        c.setAuthor(author);
+        return commentRepository.save(c);
+    }
+
+    public void delete(Long commentId, Long userId) {
+        Comment c = commentRepository.findById(commentId).orElseThrow();
+        if (c.getAuthor() == null || !c.getAuthor().getId().equals(userId)) {
+            throw new SecurityException("not author");
+        }
+        commentRepository.deleteById(commentId);
+    }
+}

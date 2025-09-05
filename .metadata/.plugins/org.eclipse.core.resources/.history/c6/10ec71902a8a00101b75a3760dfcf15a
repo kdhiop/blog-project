@@ -1,0 +1,46 @@
+package com.example.blog.controller;
+
+import com.example.blog.model.User;
+import com.example.blog.repository.UserRepository;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.web.bind.annotation.*;
+
+@RestController
+@RequestMapping("/auth")
+public class AuthController {
+
+    private final UserRepository userRepository;
+    private final BCryptPasswordEncoder passwordEncoder;
+
+    public AuthController(UserRepository userRepository) {
+        this.userRepository = userRepository;
+        this.passwordEncoder = new BCryptPasswordEncoder();
+    }
+
+    @PostMapping("/register")
+    public ResponseEntity<User> register(@RequestBody User user) {
+        if (userRepository.findByUsername(user.getUsername()) != null) {
+            return ResponseEntity.badRequest().build();
+        }
+        user.setPassword(passwordEncoder.encode(user.getPassword()));
+        return ResponseEntity.ok(userRepository.save(user));
+    }
+
+    @PostMapping("/login")
+    public ResponseEntity<String> login(@RequestBody User user) {
+        User existing = userRepository.findByUsername(user.getUsername());
+        if (existing != null && passwordEncoder.matches(user.getPassword(), existing.getPassword())) {
+            return ResponseEntity.ok("로그인 성공");
+        }
+        return ResponseEntity.status(401).body("로그인 실패");
+    }
+    
+    @GetMapping("/user")
+    public ResponseEntity<User> findUser(@RequestParam String username) {
+        User existing = userRepository.findByUsername(username);
+        if (existing == null) return ResponseEntity.notFound().build();
+        existing.setPassword(null); // 비번 노출 방지
+        return ResponseEntity.ok(existing);
+    }
+}
