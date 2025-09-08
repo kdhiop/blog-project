@@ -22,3 +22,7 @@ export const addComment = async (
   });
   return res.data;
 };
+
+export const deleteComment = async (postId: number, commentId: number, userId: number) => {
+  await axios.delete(`${BASE}/posts/${postId}/comments/${commentId}`, { params: { userId } });
+};

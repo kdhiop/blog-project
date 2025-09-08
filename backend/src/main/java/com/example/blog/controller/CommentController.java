@@ -29,6 +29,11 @@ public class CommentController {
         return toResp(c);
     }
 
+    @DeleteMapping("/{commentId}")
+    public void delete(@PathVariable Long postId, @PathVariable Long commentId, @RequestParam Long userId) {
+        commentService.delete(commentId, userId);
+    }
+
     private CommentResponse toResp(Comment c) {
         CommentResponse r = new CommentResponse();
         r.setId(c.getId());

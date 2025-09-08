@@ -22,3 +22,12 @@ export const createPost = async (userId: number, payload: { title: string; conte
   const res = await axios.post<Post>(`${BASE}/posts`, payload, { params: { userId } });
   return res.data;
 };
+
+export const updatePost = async (id: number, userId: number, payload: { title: string; content: string }) => {
+  const res = await axios.put<Post>(`${BASE}/posts/${id}`, payload, { params: { userId } });
+  return res.data;
+};
+
+export const deletePost = async (id: number, userId: number) => {
+  await axios.delete(`${BASE}/posts/${id}`, { params: { userId } });
+};
