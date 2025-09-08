@@ -37,6 +37,16 @@ public class CommentService {
         return commentRepository.save(c);
     }
 
+    // 댓글 수정 메서드 추가
+    public Comment update(Long commentId, Long userId, String content) {
+        Comment c = commentRepository.findById(commentId).orElseThrow();
+        if (c.getAuthor() == null || !c.getAuthor().getId().equals(userId)) {
+            throw new SecurityException("not author");
+        }
+        c.setContent(content);
+        return commentRepository.save(c);
+    }
+
     public void delete(Long commentId, Long userId) {
         Comment c = commentRepository.findById(commentId).orElseThrow();
         if (c.getAuthor() == null || !c.getAuthor().getId().equals(userId)) {

@@ -29,6 +29,14 @@ public class CommentController {
         return toResp(c);
     }
 
+    // 댓글 수정 엔드포인트 추가
+    @PutMapping("/{commentId}")
+    public CommentResponse update(@PathVariable Long postId, @PathVariable Long commentId, 
+                                   @RequestParam Long userId, @RequestBody CommentRequest req) {
+        Comment c = commentService.update(commentId, userId, req.getContent());
+        return toResp(c);
+    }
+
     @DeleteMapping("/{commentId}")
     public void delete(@PathVariable Long postId, @PathVariable Long commentId, @RequestParam Long userId) {
         commentService.delete(commentId, userId);

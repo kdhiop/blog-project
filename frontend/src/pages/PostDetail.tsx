@@ -1,7 +1,7 @@
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { getPost, deletePost } from "../api/posts";
-import { addComment, getComments, deleteComment } from "../api/comments";
+import { getPost, deletePost, updatePost } from "../api/posts";
+import { addComment, getComments, deleteComment, updateComment } from "../api/comments";
 import { useAuth } from "../context/AuthContext";
 import { useState } from "react";
 import "./PostDetail.css";
@@ -24,6 +24,39 @@ export default function PostDetail() {
   });
 
   const [text, setText] = useState("");
+  const [isEditingPost, setIsEditingPost] = useState(false);
+  const [editTitle, setEditTitle] = useState("");
+  const [editContent, setEditContent] = useState("");
+  const [editingCommentId, setEditingCommentId] = useState<number | null>(null);
+  const [editCommentText, setEditCommentText] = useState("");
+
+  // 게시글 수정 모드 진입
+  const startEditPost = () => {
+    if (post) {
+      setEditTitle(post.title);
+      setEditContent(post.content);
+      setIsEditingPost(true);
+    }
+  };
+
+  // 게시글 수정 취소
+  const cancelEditPost = () => {
+    setIsEditingPost(false);
+    setEditTitle("");
+    setEditContent("");
+  };
+
+  // 댓글 수정 모드 진입
+  const startEditComment = (commentId: number, content: string) => {
+    setEditingCommentId(commentId);
+    setEditCommentText(content);
+  };
+
+  // 댓글 수정 취소
+  const cancelEditComment = () => {
+    setEditingCommentId(null);
+    setEditCommentText("");
+  };
 
   // 댓글 추가
   const addCommentMut = useMutation({
@@ -31,6 +64,19 @@ export default function PostDetail() {
     onSuccess: () => {
       setText("");
       qc.invalidateQueries({ queryKey: ["comments", postId] });
+    },
+  });
+
+  // 게시글 수정
+  const updatePostMut = useMutation({
+    mutationFn: () => updatePost(postId, user!.id, { title: editTitle, content: editContent }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["post", postId] });
+      setIsEditingPost(false);
+    },
+    onError: (error) => {
+      console.error("게시글 수정 실패:", error);
+      alert("게시글 수정에 실패했습니다. 작성자만 수정할 수 있습니다.");
     },
   });
 
@@ -44,6 +90,20 @@ export default function PostDetail() {
     onError: (error) => {
       console.error("게시글 삭제 실패:", error);
       alert("게시글 삭제에 실패했습니다. 작성자만 삭제할 수 있습니다.");
+    },
+  });
+
+  // 댓글 수정
+  const updateCommentMut = useMutation({
+    mutationFn: (commentId: number) => 
+      updateComment(postId, commentId, user!.id, { content: editCommentText }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["comments", postId] });
+      cancelEditComment();
+    },
+    onError: (error) => {
+      console.error("댓글 수정 실패:", error);
+      alert("댓글 수정에 실패했습니다. 작성자만 수정할 수 있습니다.");
     },
   });
 
@@ -115,49 +175,88 @@ export default function PostDetail() {
       <div className="post-detail-wrapper">
         {/* 게시글 본문 */}
         <article className="post-article">
-          <div className="post-header">
-            <h1 className="post-title">{post.title}</h1>
-            <div className="post-meta">
-              {post.author && (
-                <div className="post-author">
-                  <div className="author-avatar">
-                    {post.author.username.charAt(0).toUpperCase()}
-                  </div>
-                  <div className="author-info">
-                    <span className="author-label">작성자</span>
-                    <span className="author-name">{post.author.username}</span>
-                  </div>
+          {!isEditingPost ? (
+            <>
+              <div className="post-header">
+                <h1 className="post-title">{post.title}</h1>
+                <div className="post-meta">
+                  {post.author && (
+                    <div className="post-author">
+                      <div className="author-avatar">
+                        {post.author.username.charAt(0).toUpperCase()}
+                      </div>
+                      <div className="author-info">
+                        <span className="author-label">작성자</span>
+                        <span className="author-name">{post.author.username}</span>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {user && post.author && post.author.id === user.id && (
+                    <div className="post-actions">
+                      <button onClick={startEditPost} className="btn-edit">
+                        <span>✏️</span>
+                        수정
+                      </button>
+                      <button
+                        onClick={handleDeletePost}
+                        disabled={deletePostMut.isPending}
+                        className="btn-delete"
+                      >
+                        {deletePostMut.isPending ? (
+                          <>삭제 중...</>
+                        ) : (
+                          <>
+                            <span>🗑️</span>
+                            삭제
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  )}
                 </div>
-              )}
-              
-              {user && post.author && post.author.id === user.id && (
-                <div className="post-actions">
-                  <button className="btn-edit">
-                    <span>✏️</span>
-                    수정
+              </div>
+
+              <div className="post-body">
+                <div className="post-content">{post.content}</div>
+              </div>
+            </>
+          ) : (
+            // 게시글 수정 모드
+            <div className="post-edit-mode">
+              <div className="edit-header">
+                <h2>게시글 수정</h2>
+                <div className="edit-actions">
+                  <button onClick={cancelEditPost} className="btn-secondary">
+                    취소
                   </button>
                   <button
-                    onClick={handleDeletePost}
-                    disabled={deletePostMut.isPending}
-                    className="btn-delete"
+                    onClick={() => updatePostMut.mutate()}
+                    disabled={updatePostMut.isPending}
+                    className="btn-primary"
                   >
-                    {deletePostMut.isPending ? (
-                      <>삭제 중...</>
-                    ) : (
-                      <>
-                        <span>🗑️</span>
-                        삭제
-                      </>
-                    )}
+                    {updatePostMut.isPending ? "저장 중..." : "저장"}
                   </button>
                 </div>
-              )}
+              </div>
+              <div className="edit-form">
+                <input
+                  type="text"
+                  className="form-input"
+                  value={editTitle}
+                  onChange={(e) => setEditTitle(e.target.value)}
+                  placeholder="제목"
+                />
+                <textarea
+                  className="form-textarea"
+                  value={editContent}
+                  onChange={(e) => setEditContent(e.target.value)}
+                  placeholder="내용"
+                  rows={10}
+                />
+              </div>
             </div>
-          </div>
-
-          <div className="post-body">
-            <div className="post-content">{post.content}</div>
-          </div>
+          )}
 
           <div className="post-footer">
             <div className="post-stats">
@@ -202,33 +301,70 @@ export default function PostDetail() {
             <div className="comments-list">
               {comments.map((c) => (
                 <div key={c.id} className="comment-item">
-                  <div className="comment-header">
-                    <div className="comment-author">
-                      <div className="comment-avatar">
-                        {c.author ? c.author.username.charAt(0).toUpperCase() : "?"}
-                      </div>
-                      <div className="comment-author-info">
-                        <span className="comment-author-name">
-                          {c.author ? c.author.username : "익명"}
-                        </span>
-                        <span className="comment-time">방금 전</span>
+                  {editingCommentId === c.id ? (
+                    // 댓글 수정 모드
+                    <div className="comment-edit-mode">
+                      <textarea
+                        className="comment-edit-textarea"
+                        value={editCommentText}
+                        onChange={(e) => setEditCommentText(e.target.value)}
+                        rows={3}
+                      />
+                      <div className="comment-edit-actions">
+                        <button
+                          onClick={cancelEditComment}
+                          className="btn-secondary"
+                        >
+                          취소
+                        </button>
+                        <button
+                          onClick={() => updateCommentMut.mutate(c.id)}
+                          disabled={updateCommentMut.isPending}
+                          className="btn-primary"
+                        >
+                          {updateCommentMut.isPending ? "저장 중..." : "저장"}
+                        </button>
                       </div>
                     </div>
-                    
-                    {user && c.author && c.author.id === user.id && (
-                      <button
-                        onClick={() => handleDeleteComment(c.id, c.author?.id)}
-                        disabled={deleteCommentMut.isPending}
-                        className="comment-delete-btn"
-                      >
-                        삭제
-                      </button>
-                    )}
-                  </div>
-                  
-                  <div className="comment-content">
-                    {c.content}
-                  </div>
+                  ) : (
+                    <>
+                      <div className="comment-header">
+                        <div className="comment-author">
+                          <div className="comment-avatar">
+                            {c.author ? c.author.username.charAt(0).toUpperCase() : "?"}
+                          </div>
+                          <div className="comment-author-info">
+                            <span className="comment-author-name">
+                              {c.author ? c.author.username : "익명"}
+                            </span>
+                            <span className="comment-time">방금 전</span>
+                          </div>
+                        </div>
+                        
+                        {user && c.author && c.author.id === user.id && (
+                          <div className="comment-actions">
+                            <button
+                              onClick={() => startEditComment(c.id, c.content)}
+                              className="comment-edit-btn"
+                            >
+                              수정
+                            </button>
+                            <button
+                              onClick={() => handleDeleteComment(c.id, c.author?.id)}
+                              disabled={deleteCommentMut.isPending}
+                              className="comment-delete-btn"
+                            >
+                              삭제
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                      
+                      <div className="comment-content">
+                        {c.content}
+                      </div>
+                    </>
+                  )}
                 </div>
               ))}
             </div>
