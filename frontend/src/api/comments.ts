@@ -7,9 +7,25 @@ export interface Comment {
   author?: { id: number; username: string };
 }
 
+// 백엔드 응답 형식
+interface BackendCommentResponse {
+  id: number;
+  content: string;
+  authorId?: number;
+  authorUsername?: string;
+}
+
 export const getComments = async (postId: number) => {
-  const res = await axios.get<Comment[]>(`${BASE}/posts/${postId}/comments`);
-  return res.data;
+  const res = await axios.get<BackendCommentResponse[]>(`${BASE}/posts/${postId}/comments`);
+  // 백엔드 응답을 프론트엔드 형식으로 변환
+  return res.data.map(comment => ({
+    id: comment.id,
+    content: comment.content,
+    author: comment.authorId && comment.authorUsername ? {
+      id: comment.authorId,
+      username: comment.authorUsername
+    } : undefined
+  })) as Comment[];
 };
 
 export const addComment = async (
@@ -17,10 +33,19 @@ export const addComment = async (
   userId: number,
   payload: { content: string }
 ) => {
-  const res = await axios.post<Comment>(`${BASE}/posts/${postId}/comments`, payload, {
+  const res = await axios.post<BackendCommentResponse>(`${BASE}/posts/${postId}/comments`, payload, {
     params: { userId },
   });
-  return res.data;
+  // 백엔드 응답을 프론트엔드 형식으로 변환
+  const comment = res.data;
+  return {
+    id: comment.id,
+    content: comment.content,
+    author: comment.authorId && comment.authorUsername ? {
+      id: comment.authorId,
+      username: comment.authorUsername
+    } : undefined
+  } as Comment;
 };
 
 export const deleteComment = async (postId: number, commentId: number, userId: number) => {
