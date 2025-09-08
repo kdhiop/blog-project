@@ -1,11 +1,12 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { Home } from "./pages/Home";
-import { NewPost } from "./pages/NewPost";
-import { PostDetail } from "./pages/PostDetail";
-import { Login } from "./pages/Login";
-import { Signup } from "./pages/Signup";
-import { Navbar } from "./components/Navbar";
 import { AuthProvider } from "./context/AuthContext";
+import Navbar from "./components/Navbar";
+import Home from "./pages/Home";
+import NewPost from "./pages/NewPost";
+import PostDetail from "./pages/PostDetail";
+import Login from "./pages/Login";
+import Signup from "./pages/Signup";
+
 
 export const App = () => {
   return (
