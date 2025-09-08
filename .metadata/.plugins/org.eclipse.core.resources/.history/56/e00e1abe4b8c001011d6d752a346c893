@@ -1,0 +1,64 @@
+package com.example.blog.controller;
+
+import com.example.blog.dto.PostRequest;
+import com.example.blog.dto.PostResponse;
+import com.example.blog.model.Post;
+import com.example.blog.service.PostService;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.stream.Collectors;
+
+@RestController
+@RequestMapping("/posts")
+@CrossOrigin(origins = "http://localhost:5173")
+public class PostController {
+
+    private final PostService postService;
+    public PostController(PostService postService) { this.postService = postService; }
+
+    @GetMapping
+    public List<PostResponse> list() {
+        return postService.listAll().stream().map(this::toResp).collect(Collectors.toList());
+    }
+
+    @GetMapping("/{id}")
+    public PostResponse get(@PathVariable Long id) {
+        return toResp(postService.get(id));
+    }
+
+    @PostMapping
+    public PostResponse create(@RequestParam Long userId, @RequestBody PostRequest req) {
+        Post p = postService.create(userId, req.getTitle(), req.getContent());
+        return toResp(p);
+    }
+
+    @PutMapping("/{id}")
+    public PostResponse update(@PathVariable Long id, @RequestParam Long userId, @RequestBody PostRequest req) {
+        Post p = postService.update(id, userId, req.getTitle(), req.getContent());
+        return toResp(p);
+    }
+
+    @DeleteMapping("/{id}")
+    public void delete(@PathVariable Long id, @RequestParam Long userId) {
+        postService.delete(id, userId);
+    }
+
+    private PostResponse toResp(Post p) {
+        PostResponse r = new PostResponse();
+        r.setId(p.getId());
+        r.setTitle(p.getTitle());
+        r.setContent(p.getContent());
+        if (p.getAuthor() != null) {
+            r.setAuthorId(p.getAuthor().getId());
+            r.setAuthorUsername(p.getAuthor().getUsername());
+        }
+        return r;
+    }
+    
+    @DeleteMapping("/posts/{id}")
+    public ResponseEntity<Void> deletePost(@PathVariable Long id) {
+        postService.deletePost(id);
+        return ResponseEntity.noContent().build(); // 204 반환
+    }
+}
