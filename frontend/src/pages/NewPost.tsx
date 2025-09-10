@@ -3,7 +3,6 @@ import { createPost } from "../api/posts";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
-import "./NewPost.css";
 
 export default function NewPost() {
   const { user } = useAuth();

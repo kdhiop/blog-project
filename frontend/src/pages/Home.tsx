@@ -1,7 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { getPosts, type Post } from "../api/posts";
 import { Link } from "react-router-dom";
-import "./Home.css";
 
 export default function Home() {
   const { data, isLoading, isError } = useQuery({ queryKey: ["posts"], queryFn: getPosts });

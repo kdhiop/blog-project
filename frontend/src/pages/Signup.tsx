@@ -3,7 +3,6 @@ import { useMutation } from "@tanstack/react-query";
 import { register } from "../api/auth";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate, Link } from "react-router-dom";
-import "./Signup.css";
 
 export default function Signup() {
   const [username, setUsername] = useState("");

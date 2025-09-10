@@ -3,7 +3,6 @@ import { useMutation } from "@tanstack/react-query";
 import { fetchUserByUsername, login } from "../api/auth";
 import { useAuth } from "../context/AuthContext";
 import { useLocation, useNavigate, Link } from "react-router-dom";
-import "./Login.css";
 
 export default function Login() {
   const [username, setUsername] = useState("");

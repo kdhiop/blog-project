@@ -4,7 +4,6 @@ import { getPost, deletePost, updatePost } from "../api/posts";
 import { addComment, getComments, deleteComment, updateComment } from "../api/comments";
 import { useAuth } from "../context/AuthContext";
 import { useState } from "react";
-import "./PostDetail.css";
 
 export default function PostDetail() {
   const { id } = useParams();
