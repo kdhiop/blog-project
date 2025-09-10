@@ -1,3 +1,4 @@
+// src/components/Navbar.tsx
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
@@ -8,49 +9,49 @@ export default function Navbar() {
   const isActive = (path: string) => location.pathname === path;
 
   return (
-    <nav className="navbar">
-      <div className="navbar-container">
-        <div className="navbar-brand">
-          <Link to="/" className="brand-link">
-            <span className="brand-icon">📝</span>
-            <span className="brand-text">My Blog</span>
+    <nav className="nav-bar">
+      <div className="nav-container">
+        <div className="nav-brand">
+          <Link to="/" className="nav-brand-link">
+            <span className="nav-brand-icon">📝</span>
+            <span className="nav-brand-text">My Blog</span>
           </Link>
         </div>
 
-        <div className="navbar-menu">
-          <Link 
-            to="/" 
-            className={`navbar-link ${isActive('/') ? 'active' : ''}`}
+        <div className="nav-menu">
+          <Link
+            to="/"
+            className={`nav-link ${isActive('/') ? 'nav-link--active' : ''}`}
           >
-            <span className="link-icon">🏠</span>
+            <span className="nav-brand-icon">🏠</span>
             <span>홈</span>
           </Link>
-          <Link 
-            to="/new" 
-            className={`navbar-link ${isActive('/new') ? 'active' : ''}`}
+          <Link
+            to="/new"
+            className={`nav-link ${isActive('/new') ? 'nav-link--active' : ''}`}
           >
-            <span className="link-icon">✏️</span>
+            <span className="nav-brand-icon">✏️</span>
             <span>글쓰기</span>
           </Link>
         </div>
 
-        <div className="navbar-auth">
+        <div className="nav-auth">
           {user ? (
-            <div className="user-menu">
-              <div className="user-info">
-                <span className="user-avatar">👤</span>
-                <span className="user-name">{user.username}</span>
+            <div className="nav-user-menu">
+              <div className="nav-user-info">
+                <span className="nav-user-avatar">👤</span>
+                <span className="nav-user-name">{user.username}</span>
               </div>
-              <button onClick={logout} className="logout-btn">
+              <button onClick={logout} className="nav-logout-btn">
                 로그아웃
               </button>
             </div>
           ) : (
-            <div className="auth-links">
-              <Link to="/login" className="auth-link login-link">
+            <div className="nav-auth-links">
+              <Link to="/login" className="nav-auth-link nav-auth-link--login">
                 로그인
               </Link>
-              <Link to="/signup" className="auth-link signup-link">
+              <Link to="/signup" className="nav-auth-link nav-auth-link--signup">
                 회원가입
               </Link>
             </div>
