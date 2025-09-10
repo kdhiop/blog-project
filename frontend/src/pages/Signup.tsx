@@ -10,7 +10,7 @@ export default function Signup() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
-  
+
   const { login } = useAuth();
   const nav = useNavigate();
 
@@ -33,7 +33,7 @@ export default function Signup() {
     if (/[A-Z]/.test(password)) strength++;
     if (/[0-9]/.test(password)) strength++;
     if (/[^A-Za-z0-9]/.test(password)) strength++;
-    
+
     if (strength <= 1) return "weak";
     if (strength <= 2) return "medium";
     return "strong";
@@ -42,15 +42,15 @@ export default function Signup() {
   const passwordStrength = getPasswordStrength();
 
   return (
-    <div className="signup-container">
-      <div className="signup-card">
-        <div className="signup-header">
-          <div className="signup-icon">✨</div>
-          <h1 className="signup-title">회원가입</h1>
-          <p className="signup-subtitle">블로그 커뮤니티에 가입하세요</p>
+    <div className="auth-page-container">
+      <div className="auth-page-card">
+        <div className="auth-page-header">
+          <div className="auth-page-icon">✨</div>
+          <h1 className="auth-page-title">회원가입</h1>
+          <p className="auth-page-subtitle">블로그 커뮤니티에 가입하세요</p>
         </div>
 
-        <div className="signup-body">
+        <div className="auth-page-body">
           <form
             onSubmit={(e) => {
               e.preventDefault();
@@ -60,7 +60,7 @@ export default function Signup() {
               }
               mut.mutate();
             }}
-            className="signup-form"
+            className="auth-page-form"
           >
             <div className="form-group">
               <label htmlFor="username" className="form-label">
@@ -82,7 +82,7 @@ export default function Signup() {
               <label htmlFor="password" className="form-label">
                 비밀번호
               </label>
-              <div className="password-input-wrapper">
+              <div className="form-password-wrapper">
                 <input
                   id="password"
                   type={showPassword ? "text" : "password"}
@@ -95,43 +95,43 @@ export default function Signup() {
                 />
                 <button
                   type="button"
-                  className="password-toggle"
+                  className="form-password-toggle"
                   onClick={() => setShowPassword(!showPassword)}
                   aria-label={showPassword ? "비밀번호 숨기기" : "비밀번호 보기"}
                 >
                   {showPassword ? "👁️" : "👁️‍🗨️"}
                 </button>
               </div>
-              
+
               {password && (
-                <div className="password-strength">
-                  <div className="strength-bar">
-                    <div className={`strength-fill ${passwordStrength}`}></div>
+                <div className="auth-password-strength">
+                  <div className="auth-strength-bar">
+                    <div className={`auth-strength-fill auth-strength-fill--${passwordStrength}`}></div>
                   </div>
-                  <span className="strength-text">
+                  <span className="auth-strength-text">
                     비밀번호 강도: {
                       passwordStrength === "weak" ? "약함" :
-                      passwordStrength === "medium" ? "보통" : "강함"
+                        passwordStrength === "medium" ? "보통" : "강함"
                     }
                   </span>
                 </div>
               )}
 
-              <div className="password-requirements">
-                <div className={`requirement ${password.length >= 8 ? "met" : ""}`}>
-                  <span className="requirement-icon">
+              <div className="auth-password-requirements">
+                <div className={`auth-requirement ${password.length >= 8 ? "auth-requirement--met" : ""}`}>
+                  <span className="auth-requirement-icon">
                     {password.length >= 8 ? "✓" : "○"}
                   </span>
                   <span>최소 8자 이상</span>
                 </div>
-                <div className={`requirement ${/[A-Z]/.test(password) ? "met" : ""}`}>
-                  <span className="requirement-icon">
+                <div className={`auth-requirement ${/[A-Z]/.test(password) ? "auth-requirement--met" : ""}`}>
+                  <span className="auth-requirement-icon">
                     {/[A-Z]/.test(password) ? "✓" : "○"}
                   </span>
                   <span>대문자 포함</span>
                 </div>
-                <div className={`requirement ${/[0-9]/.test(password) ? "met" : ""}`}>
-                  <span className="requirement-icon">
+                <div className={`auth-requirement ${/[0-9]/.test(password) ? "auth-requirement--met" : ""}`}>
+                  <span className="auth-requirement-icon">
                     {/[0-9]/.test(password) ? "✓" : "○"}
                   </span>
                   <span>숫자 포함</span>
@@ -154,62 +154,60 @@ export default function Signup() {
                 autoComplete="new-password"
               />
               {confirmPassword && password !== confirmPassword && (
-                <span style={{ color: "#ef4444", fontSize: "0.85rem", marginTop: "0.25rem" }}>
+                <span className="form-error-text">
                   비밀번호가 일치하지 않습니다
                 </span>
               )}
             </div>
 
-            <div className="terms-checkbox">
+            <div className="auth-terms-checkbox">
               <input
                 type="checkbox"
                 id="terms"
                 checked={agreedToTerms}
                 onChange={(e) => setAgreedToTerms(e.target.checked)}
               />
-              <label htmlFor="terms" className="terms-label">
+              <label htmlFor="terms" className="auth-terms-label">
                 <a href="#">이용약관</a> 및 <a href="#">개인정보처리방침</a>에 동의합니다
               </label>
             </div>
 
-            <button 
-              type="submit" 
-              className="submit-btn"
+            <button
+              type="submit"
+              className="auth-submit-btn"
               disabled={mut.isPending || !agreedToTerms}
             >
               {mut.isPending ? "가입 중..." : "회원가입"}
             </button>
 
             {mut.isError && (
-              <div className="error-message">
+              <div className="ui-error-message">
                 회원가입에 실패했습니다. {mut.error?.message || "이미 사용 중인 아이디일 수 있습니다."}
               </div>
             )}
           </form>
 
-          <div className="signup-benefits">
-            <p className="benefits-title">회원가입 혜택</p>
-            <div className="benefit-item">
-              <span className="benefit-icon">✍️</span>
+          <div className="auth-signup-benefits">
+            <p className="auth-benefits-title">회원가입 혜택</p>
+            <div className="auth-benefit-item">
+              <span className="auth-benefit-icon">✍️</span>
               <span>자유로운 글 작성 및 공유</span>
             </div>
-            <div className="benefit-item">
-              <span className="benefit-icon">💬</span>
+            <div className="auth-benefit-item">
+              <span className="auth-benefit-icon">💬</span>
               <span>다른 사용자와 댓글로 소통</span>
             </div>
-            <div className="benefit-item">
-              <span className="benefit-icon">📚</span>
+            <div className="auth-benefit-item">
+              <span className="auth-benefit-icon">📚</span>
               <span>나만의 블로그 포트폴리오 구축</span>
             </div>
           </div>
         </div>
 
-        <div className="signup-footer">
-          <p className="login-prompt">
+        <div className="auth-page-footer">
+          <p className="auth-page-prompt">
             이미 계정이 있으신가요?
-            <Link to="/login" className="login-link">
-              로그인
-            </Link>
+            <Link to="/login">로그인</Link>
           </p>
         </div>
       </div>

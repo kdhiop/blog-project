@@ -7,7 +7,6 @@ import PostDetail from "./pages/PostDetail";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 
-
 export const App = () => {
   return (
     <AuthProvider>

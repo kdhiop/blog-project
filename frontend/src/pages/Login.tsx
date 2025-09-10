@@ -1,4 +1,3 @@
-// src/pages/Login.tsx
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { fetchUserByUsername, login } from "../api/auth";

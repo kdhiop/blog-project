@@ -12,14 +12,14 @@ export default function PostDetail() {
   const qc = useQueryClient();
   const navigate = useNavigate();
 
-  const { data: post, isLoading: postLoading } = useQuery({ 
-    queryKey: ["post", postId], 
-    queryFn: () => getPost(postId) 
+  const { data: post, isLoading: postLoading } = useQuery({
+    queryKey: ["post", postId],
+    queryFn: () => getPost(postId)
   });
-  
-  const { data: comments, isLoading: commentsLoading } = useQuery({ 
-    queryKey: ["comments", postId], 
-    queryFn: () => getComments(postId) 
+
+  const { data: comments, isLoading: commentsLoading } = useQuery({
+    queryKey: ["comments", postId],
+    queryFn: () => getComments(postId)
   });
 
   const [text, setText] = useState("");
@@ -94,7 +94,7 @@ export default function PostDetail() {
 
   // 댓글 수정
   const updateCommentMut = useMutation({
-    mutationFn: (commentId: number) => 
+    mutationFn: (commentId: number) =>
       updateComment(postId, commentId, user!.id, { content: editCommentText }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["comments", postId] });
@@ -149,9 +149,9 @@ export default function PostDetail() {
   if (postLoading) {
     return (
       <div className="post-detail-container">
-        <div className="loading-container">
-          <div className="spinner"></div>
-          <p className="loading-text">게시글을 불러오는 중...</p>
+        <div className="ui-loading-container">
+          <div className="ui-spinner"></div>
+          <p className="ui-loading-text">게시글을 불러오는 중...</p>
         </div>
       </div>
     );
@@ -160,10 +160,10 @@ export default function PostDetail() {
   if (!post) {
     return (
       <div className="post-detail-container">
-        <div className="error-container">
-          <span className="error-icon">😕</span>
+        <div className="ui-error-container">
+          <span className="ui-error-icon">😕</span>
           <h2>게시글을 찾을 수 없습니다</h2>
-          <Link to="/" className="btn-primary">홈으로 돌아가기</Link>
+          <Link to="/" className="ui-btn ui-btn-primary">홈으로 돌아가기</Link>
         </div>
       </div>
     );
@@ -176,31 +176,31 @@ export default function PostDetail() {
         <article className="post-article">
           {!isEditingPost ? (
             <>
-              <div className="post-header">
-                <h1 className="post-title">{post.title}</h1>
-                <div className="post-meta">
+              <div className="post-detail-header">
+                <h1 className="post-detail-title">{post.title}</h1>
+                <div className="post-detail-meta">
                   {post.author && (
-                    <div className="post-author">
-                      <div className="author-avatar">
+                    <div className="post-detail-author">
+                      <div className="post-detail-author-avatar">
                         {post.author.username.charAt(0).toUpperCase()}
                       </div>
-                      <div className="author-info">
-                        <span className="author-label">작성자</span>
-                        <span className="author-name">{post.author.username}</span>
+                      <div className="post-detail-author-info">
+                        <span className="post-detail-author-label">작성자</span>
+                        <span className="post-detail-author-name">{post.author.username}</span>
                       </div>
                     </div>
                   )}
-                  
+
                   {user && post.author && post.author.id === user.id && (
-                    <div className="post-actions">
-                      <button onClick={startEditPost} className="btn-edit">
+                    <div className="post-detail-actions">
+                      <button onClick={startEditPost} className="post-edit-btn">
                         <span>✏️</span>
                         수정
                       </button>
                       <button
                         onClick={handleDeletePost}
                         disabled={deletePostMut.isPending}
-                        className="btn-delete"
+                        className="post-delete-btn ui-btn-danger"
                       >
                         {deletePostMut.isPending ? (
                           <>삭제 중...</>
@@ -216,29 +216,29 @@ export default function PostDetail() {
                 </div>
               </div>
 
-              <div className="post-body">
-                <div className="post-content">{post.content}</div>
+              <div className="post-detail-body">
+                <div className="post-detail-content">{post.content}</div>
               </div>
             </>
           ) : (
             // 게시글 수정 모드
             <div className="post-edit-mode">
-              <div className="edit-header">
+              <div className="post-edit-header">
                 <h2>게시글 수정</h2>
-                <div className="edit-actions">
-                  <button onClick={cancelEditPost} className="btn-secondary">
+                <div className="post-edit-actions">
+                  <button onClick={cancelEditPost} className="ui-btn ui-btn-secondary">
                     취소
                   </button>
                   <button
                     onClick={() => updatePostMut.mutate()}
                     disabled={updatePostMut.isPending}
-                    className="btn-primary"
+                    className="ui-btn ui-btn-primary"
                   >
                     {updatePostMut.isPending ? "저장 중..." : "저장"}
                   </button>
                 </div>
               </div>
-              <div className="edit-form">
+              <div className="post-edit-form">
                 <input
                   type="text"
                   className="form-input"
@@ -257,22 +257,22 @@ export default function PostDetail() {
             </div>
           )}
 
-          <div className="post-footer">
-            <div className="post-stats">
-              <span className="stat-item">
+          <div className="ui-card-footer">
+            <div className="post-detail-stats">
+              <span className="post-stat-item">
                 <span>💬</span>
                 댓글 {comments?.length || 0}개
               </span>
-              <span className="stat-item">
+              <span className="post-stat-item">
                 <span>👁️</span>
                 조회 128회
               </span>
             </div>
-            <div className="share-buttons">
-              <button className="share-btn" title="공유하기">
+            <div className="post-share-buttons">
+              <button className="post-share-btn" title="공유하기">
                 <span>🔗</span>
               </button>
-              <button className="share-btn" title="북마크">
+              <button className="post-share-btn" title="북마크">
                 <span>📌</span>
               </button>
             </div>
@@ -293,8 +293,8 @@ export default function PostDetail() {
 
           {/* 댓글 목록 */}
           {commentsLoading ? (
-            <div className="loading-container">
-              <div className="spinner"></div>
+            <div className="ui-loading-container">
+              <div className="ui-spinner"></div>
             </div>
           ) : comments && comments.length > 0 ? (
             <div className="comments-list">
@@ -312,14 +312,14 @@ export default function PostDetail() {
                       <div className="comment-edit-actions">
                         <button
                           onClick={cancelEditComment}
-                          className="btn-secondary"
+                          className="ui-btn ui-btn-secondary"
                         >
                           취소
                         </button>
                         <button
                           onClick={() => updateCommentMut.mutate(c.id)}
                           disabled={updateCommentMut.isPending}
-                          className="btn-primary"
+                          className="ui-btn ui-btn-primary"
                         >
                           {updateCommentMut.isPending ? "저장 중..." : "저장"}
                         </button>
@@ -339,7 +339,7 @@ export default function PostDetail() {
                             <span className="comment-time">방금 전</span>
                           </div>
                         </div>
-                        
+
                         {user && c.author && c.author.id === user.id && (
                           <div className="comment-actions">
                             <button
@@ -358,7 +358,7 @@ export default function PostDetail() {
                           </div>
                         )}
                       </div>
-                      
+
                       <div className="comment-content">
                         {c.content}
                       </div>
@@ -368,10 +368,10 @@ export default function PostDetail() {
               ))}
             </div>
           ) : (
-            <div className="empty-comments">
-              <div className="empty-icon">💭</div>
-              <p className="empty-text">아직 댓글이 없습니다</p>
-              <p className="empty-subtext">첫 번째 댓글을 작성해보세요!</p>
+            <div className="comments-empty">
+              <div className="home-empty-icon">💭</div>
+              <p className="comments-empty-text">아직 댓글이 없습니다</p>
+              <p className="comments-empty-subtext">첫 번째 댓글을 작성해보세요!</p>
             </div>
           )}
 
@@ -382,7 +382,7 @@ export default function PostDetail() {
                 <h3 className="comment-form-title">댓글 작성</h3>
                 <p className="comment-form-subtitle">여러분의 생각을 공유해주세요</p>
               </div>
-              
+
               <div className="comment-input-wrapper">
                 <textarea
                   className="comment-textarea"
@@ -398,7 +398,7 @@ export default function PostDetail() {
                   disabled={addCommentMut.isPending}
                 />
               </div>
-              
+
               <div className="comment-form-footer">
                 <span className="comment-guidelines">
                   건전한 토론 문화를 위해 서로를 존중해주세요 💙
@@ -423,10 +423,10 @@ export default function PostDetail() {
               </div>
             </div>
           ) : (
-            <div className="login-prompt">
-              <div className="login-prompt-icon">🔒</div>
-              <p className="login-prompt-text">댓글을 작성하려면 로그인이 필요합니다</p>
-              <Link to="/login" className="login-prompt-btn">
+            <div className="comment-login-prompt">
+              <div className="comment-login-prompt-icon">🔒</div>
+              <p className="comment-login-prompt-text">댓글을 작성하려면 로그인이 필요합니다</p>
+              <Link to="/login" className="comment-login-prompt-btn">
                 로그인하기
                 <span>→</span>
               </Link>

@@ -1,4 +1,3 @@
-// src/pages/Home.tsx
 import { useQuery } from "@tanstack/react-query";
 import { getPosts, type Post } from "../api/posts";
 import { Link } from "react-router-dom";

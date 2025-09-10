@@ -39,18 +39,18 @@ export default function NewPost() {
       <div className="new-post-wrapper">
         <div className="new-post-card">
           <div className="new-post-header">
-            <div className="header-content">
-              <div className="header-title">
-                <div className="header-icon">✍️</div>
-                <div className="header-text">
+            <div className="new-post-header-content">
+              <div className="new-post-header-title">
+                <div className="new-post-header-icon">✍️</div>
+                <div className="new-post-header-text">
                   <h1>새 글 작성</h1>
                   <p>당신의 이야기를 공유해보세요</p>
                 </div>
               </div>
-              <button 
-                type="button" 
+              <button
+                type="button"
                 onClick={handleCancel}
-                className="cancel-btn"
+                className="new-post-cancel-btn"
               >
                 취소
               </button>
@@ -65,13 +65,13 @@ export default function NewPost() {
                   if (!user) return alert("로그인 후 작성하세요.");
                   mut.mutate();
                 }}
-                className="post-form"
+                className="new-post-form"
               >
                 <div className="form-group">
                   <label htmlFor="title" className="form-label">
-                    <span className="label-icon">📌</span>
+                    <span className="form-label-icon">📌</span>
                     제목
-                    <span className="required">*</span>
+                    <span className="form-required">*</span>
                   </label>
                   <input
                     id="title"
@@ -87,70 +87,70 @@ export default function NewPost() {
 
                 <div className="form-group">
                   <label htmlFor="content" className="form-label">
-                    <span className="label-icon">📝</span>
+                    <span className="form-label-icon">📝</span>
                     내용
-                    <span className="required">*</span>
+                    <span className="form-required">*</span>
                   </label>
-                  
-                  <div className="toolbar">
-                    <button type="button" className="toolbar-btn" title="굵게">
+
+                  <div className="new-post-toolbar">
+                    <button type="button" className="new-post-toolbar-btn" title="굵게">
                       <strong>B</strong>
                     </button>
-                    <button type="button" className="toolbar-btn" title="기울임">
+                    <button type="button" className="new-post-toolbar-btn" title="기울임">
                       <em>I</em>
                     </button>
-                    <button type="button" className="toolbar-btn" title="밑줄">
+                    <button type="button" className="new-post-toolbar-btn" title="밑줄">
                       <u>U</u>
                     </button>
-                    <div className="toolbar-separator"></div>
-                    <button type="button" className="toolbar-btn" title="목록">
+                    <div className="new-post-toolbar-separator"></div>
+                    <button type="button" className="new-post-toolbar-btn" title="목록">
                       📋
                     </button>
-                    <button type="button" className="toolbar-btn" title="링크">
+                    <button type="button" className="new-post-toolbar-btn" title="링크">
                       🔗
                     </button>
-                    <button type="button" className="toolbar-btn" title="이미지">
+                    <button type="button" className="new-post-toolbar-btn" title="이미지">
                       🖼️
                     </button>
                   </div>
-                  
+
                   <textarea
                     id="content"
-                    className="form-input form-textarea with-toolbar"
+                    className="form-input form-textarea new-post-textarea--with-toolbar"
                     placeholder="여기에 당신의 생각, 아이디어, 이야기를 자유롭게 작성해보세요.&#10;&#10;마크다운 문법을 지원합니다:&#10;- **굵은 글씨** 또는 *기울임*&#10;- [링크](url)&#10;- ![이미지](url)"
                     value={content}
                     onChange={(e) => setContent(e.target.value)}
                     required
                     maxLength={maxChars}
                   />
-                  <div className={`char-count ${charCount > maxChars * 0.9 ? 'warning' : ''} ${charCount >= maxChars ? 'error' : ''}`}>
+                  <div className={`form-char-count ${charCount > maxChars * 0.9 ? 'form-char-count--warning' : ''} ${charCount >= maxChars ? 'form-char-count--error' : ''}`}>
                     {charCount} / {maxChars}
                   </div>
                 </div>
 
-                <div className="form-footer">
-                  <div className="draft-info">
+                <div className="new-post-form-footer">
+                  <div className="new-post-draft-info">
                     <span>💾</span>
                     <span>임시저장은 자동으로 진행됩니다</span>
                   </div>
-                  
-                  <div className="form-actions">
+
+                  <div className="new-post-form-actions">
                     <button
                       type="button"
                       onClick={() => setIsPreview(true)}
-                      className="btn-secondary"
+                      className="ui-btn ui-btn-secondary"
                       disabled={!title || !content}
                     >
                       미리보기
                     </button>
-                    <button 
-                      type="submit" 
-                      className="btn-primary"
+                    <button
+                      type="submit"
+                      className="ui-btn ui-btn-primary"
                       disabled={mut.isPending || !title || !content}
                     >
                       {mut.isPending ? (
                         <>
-                          <span className="spinner-small"></span>
+                          <span className="ui-spinner-small"></span>
                           발행 중...
                         </>
                       ) : (
@@ -164,25 +164,25 @@ export default function NewPost() {
                 </div>
 
                 {mut.isError && (
-                  <div className="error-message">
+                  <div className="ui-error-message">
                     <span>⚠️</span>
                     작성에 실패했습니다. 다시 시도해주세요.
                   </div>
                 )}
               </form>
             ) : (
-              <div className="preview-mode">
+              <div className="new-post-preview-mode">
                 <div style={{ marginBottom: "1.5rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <h3 style={{ margin: 0 }}>미리보기</h3>
                   <button
                     onClick={() => setIsPreview(false)}
-                    className="btn-secondary"
+                    className="ui-btn ui-btn-secondary"
                   >
                     편집으로 돌아가기
                   </button>
                 </div>
-                <div className="preview-title">{title}</div>
-                <div className="preview-content">{content}</div>
+                <div className="new-post-preview-title">{title}</div>
+                <div className="new-post-preview-content">{content}</div>
               </div>
             )}
           </div>
