@@ -14,7 +14,6 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/auth")
-@CrossOrigin(origins = "${app.frontend.url:http://localhost:5173}")
 public class AuthController {
 
 	private static final Logger logger = LoggerFactory.getLogger(AuthController.class);
@@ -30,45 +29,80 @@ public class AuthController {
 	@PostMapping("/register")
 	public ResponseEntity<AuthResponse> register(@Valid @RequestBody AuthRequest req) {
 		try {
-			logger.info("회원가입 시도: {}", req.getUsername());
+			// 입력값 정리 (trim 처리)
+			String trimmedUsername = req.getUsername() != null ? req.getUsername().trim() : "";
+			
+			logger.info("회원가입 시도: username={}, passwordLength={}", 
+			           trimmedUsername, 
+			           req.getPassword() != null ? req.getPassword().length() : 0);
 
-			User user = userService.register(req.getUsername(), req.getPassword());
+			// 추가 유효성 검증
+			if (trimmedUsername.isEmpty()) {
+				logger.warn("회원가입 실패 - 빈 사용자명");
+				throw new IllegalArgumentException("사용자명은 필수입니다");
+			}
 
-			logger.info("회원가입 성공: {}", user.getUsername());
+			if (req.getPassword() == null || req.getPassword().isEmpty()) {
+				logger.warn("회원가입 실패 - 빈 비밀번호");
+				throw new IllegalArgumentException("비밀번호는 필수입니다");
+			}
+
+			User user = userService.register(trimmedUsername, req.getPassword());
+
+			logger.info("회원가입 성공: userId={}, username={}", user.getId(), user.getUsername());
 			return ResponseEntity.ok(new AuthResponse(user.getId(), user.getUsername()));
 
 		} catch (IllegalArgumentException ex) {
 			logger.warn("회원가입 실패 - {}: {}", req.getUsername(), ex.getMessage());
-			return ResponseEntity.badRequest().build();
+			// GlobalExceptionHandler가 처리하도록 예외를 다시 던짐
+			throw ex;
 		} catch (Exception ex) {
 			logger.error("회원가입 중 예외 발생: {}", ex.getMessage(), ex);
-			return ResponseEntity.status(500).build();
+			throw new RuntimeException("회원가입 처리 중 오류가 발생했습니다");
 		}
 	}
 
 	@PostMapping("/login")
 	public ResponseEntity<LoginResponse> login(@Valid @RequestBody AuthRequest req) {
 		try {
-			logger.info("로그인 시도: {}", req.getUsername());
+			// 입력값 정리 (trim 처리)
+			String trimmedUsername = req.getUsername() != null ? req.getUsername().trim() : "";
+			
+			logger.info("로그인 시도: username={}", trimmedUsername);
 
-			boolean isValid = userService.authenticate(req.getUsername(), req.getPassword());
+			// 추가 유효성 검증
+			if (trimmedUsername.isEmpty()) {
+				logger.warn("로그인 실패 - 빈 사용자명");
+				throw new IllegalArgumentException("사용자명은 필수입니다");
+			}
+
+			if (req.getPassword() == null || req.getPassword().isEmpty()) {
+				logger.warn("로그인 실패 - 빈 비밀번호");
+				throw new IllegalArgumentException("비밀번호는 필수입니다");
+			}
+
+			boolean isValid = userService.authenticate(trimmedUsername, req.getPassword());
 			if (isValid) {
-				User user = userService.findByUsername(req.getUsername());
+				User user = userService.findByUsername(trimmedUsername);
 				String token = jwtTokenProvider.createToken(user.getUsername(), user.getId());
 
 				LoginResponse response = new LoginResponse();
 				response.setToken(token);
 				response.setUser(new AuthResponse(user.getId(), user.getUsername()));
 
-				logger.info("로그인 성공: {}", user.getUsername());
+				logger.info("로그인 성공: userId={}, username={}", user.getId(), user.getUsername());
 				return ResponseEntity.ok(response);
 			} else {
-				logger.warn("로그인 실패 - 잘못된 인증 정보: {}", req.getUsername());
-				return ResponseEntity.status(401).build();
+				logger.warn("로그인 실패 - 잘못된 인증 정보: {}", trimmedUsername);
+				throw new SecurityException("잘못된 인증 정보입니다");
 			}
-		} catch (Exception e) {
-			logger.error("로그인 중 예외 발생: {}", e.getMessage(), e);
-			return ResponseEntity.status(500).build();
+		} catch (IllegalArgumentException | SecurityException ex) {
+			logger.warn("로그인 실패 - {}: {}", req.getUsername(), ex.getMessage());
+			// GlobalExceptionHandler가 처리하도록 예외를 다시 던짐
+			throw ex;
+		} catch (Exception ex) {
+			logger.error("로그인 중 예외 발생: {}", ex.getMessage(), ex);
+			throw new RuntimeException("로그인 처리 중 오류가 발생했습니다");
 		}
 	}
 
@@ -80,32 +114,48 @@ public class AuthController {
 				String username = jwtTokenProvider.getUsername(token);
 				Long userId = jwtTokenProvider.getUserId(token);
 
-				logger.debug("현재 사용자 정보 조회: {}", username);
+				logger.debug("현재 사용자 정보 조회: userId={}, username={}", userId, username);
 				return ResponseEntity.ok(new AuthResponse(userId, username));
 			} else {
 				logger.warn("유효하지 않은 토큰으로 사용자 정보 조회 시도");
-				return ResponseEntity.status(401).build();
+				throw new SecurityException("유효하지 않은 토큰입니다");
 			}
-		} catch (Exception e) {
-			logger.error("사용자 정보 조회 중 예외 발생: {}", e.getMessage(), e);
-			return ResponseEntity.status(401).build();
+		} catch (SecurityException ex) {
+			logger.warn("사용자 정보 조회 실패: {}", ex.getMessage());
+			throw ex;
+		} catch (Exception ex) {
+			logger.error("사용자 정보 조회 중 예외 발생: {}", ex.getMessage(), ex);
+			throw new RuntimeException("사용자 정보 조회 중 오류가 발생했습니다");
 		}
 	}
 
-	// 호환성을 위해 유지 (프론트엔드가 아직 사용 중)
+	// 호환성을 위해 유지 (프론트엔드가 아직 사용 중인 경우)
 	@GetMapping("/user")
 	public ResponseEntity<AuthResponse> findUser(@RequestParam String username) {
 		try {
-			User user = userService.findByUsername(username);
+			String trimmedUsername = username != null ? username.trim() : "";
+			
+			if (trimmedUsername.isEmpty()) {
+				logger.warn("빈 사용자명으로 사용자 조회 시도");
+				throw new IllegalArgumentException("사용자명은 필수입니다");
+			}
+
+			User user = userService.findByUsername(trimmedUsername);
 			if (user == null) {
-				logger.warn("존재하지 않는 사용자 조회: {}", username);
-				return ResponseEntity.notFound().build();
+				logger.warn("존재하지 않는 사용자 조회: {}", trimmedUsername);
+				throw new RuntimeException("사용자를 찾을 수 없습니다");
 			}
 
 			return ResponseEntity.ok(new AuthResponse(user.getId(), user.getUsername()));
-		} catch (Exception e) {
-			logger.error("사용자 조회 중 예외 발생: {}", e.getMessage(), e);
-			return ResponseEntity.status(500).build();
+		} catch (IllegalArgumentException ex) {
+			logger.warn("사용자 조회 실패: {}", ex.getMessage());
+			throw ex;
+		} catch (RuntimeException ex) {
+			logger.warn("사용자 조회 실패: {}", ex.getMessage());
+			throw ex;
+		} catch (Exception ex) {
+			logger.error("사용자 조회 중 예외 발생: {}", ex.getMessage(), ex);
+			throw new RuntimeException("사용자 조회 중 오류가 발생했습니다");
 		}
 	}
 }

@@ -14,17 +14,50 @@ export default function Signup() {
   const { login: setAuth } = useAuth();
   const nav = useNavigate();
 
+  // 클라이언트 사이드 유효성 검증 함수
+  const validateInput = () => {
+    const errors: string[] = [];
+    
+    if (!username || username.length < 3 || username.length > 20) {
+      errors.push("사용자명은 3-20자 사이여야 합니다");
+    }
+    
+    if (!password || password.length < 6) {
+      errors.push("비밀번호는 6자 이상이어야 합니다");
+    }
+    
+    if (password !== confirmPassword) {
+      errors.push("비밀번호가 일치하지 않습니다");
+    }
+    
+    if (!agreedToTerms) {
+      errors.push("이용약관에 동의해주세요");
+    }
+    
+    return errors;
+  };
+
   const mut = useMutation({
     mutationFn: async () => {
-      if (password !== confirmPassword) {
-        throw new Error("비밀번호가 일치하지 않습니다");
+      console.log("회원가입 요청 데이터:", { 
+        username, 
+        passwordLength: password.length,
+        confirmPasswordMatch: password === confirmPassword 
+      });
+      
+      // 클라이언트 사이드 유효성 검증
+      const validationErrors = validateInput();
+      if (validationErrors.length > 0) {
+        throw new Error(validationErrors.join(", "));
       }
 
       // 1. 회원가입
       const user = await register({ username, password });
+      console.log("회원가입 성공:", user);
 
       // 2. 바로 로그인하여 토큰 받기
       const loginResponse = await login({ username, password });
+      console.log("자동 로그인 성공:", loginResponse);
 
       return { user, loginResponse };
     },
@@ -33,8 +66,15 @@ export default function Signup() {
       setAuth(data.loginResponse.token, data.loginResponse.user);
       nav("/");
     },
-    onError: (error) => {
+    onError: (error: any) => {
       console.error("회원가입 실패:", error);
+      
+      // 서버에서 온 상세한 에러 메시지 추출
+      if (error.response?.data?.message) {
+        console.error("서버 에러 메시지:", error.response.data.message);
+      } else if (error.response?.data?.fieldErrors) {
+        console.error("필드 검증 에러:", error.response.data.fieldErrors);
+      }
     }
   });
 
@@ -54,6 +94,36 @@ export default function Signup() {
 
   const passwordStrength = getPasswordStrength();
 
+  // 에러 메시지 표시 함수
+  const getErrorMessage = () => {
+    if (!mut.error) return null;
+    
+    const error = mut.error as any;
+    
+    // 클라이언트 사이드 에러
+    if (error.message && !error.response) {
+      return error.message;
+    }
+    
+    // 서버 에러
+    if (error.response?.data?.message) {
+      return error.response.data.message;
+    }
+    
+    // 필드 검증 에러
+    if (error.response?.data?.fieldErrors) {
+      const fieldErrors = error.response.data.fieldErrors;
+      return Object.values(fieldErrors).join(", ");
+    }
+    
+    // 기본 에러 메시지
+    if (error.response?.status === 400) {
+      return "입력 정보를 확인해주세요. 이미 사용 중인 아이디일 수 있습니다.";
+    }
+    
+    return "회원가입 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.";
+  };
+
   return (
     <div className="auth-page-container">
       <div className="auth-page-card">
@@ -67,10 +137,6 @@ export default function Signup() {
           <form
             onSubmit={(e) => {
               e.preventDefault();
-              if (!agreedToTerms) {
-                alert("이용약관에 동의해주세요");
-                return;
-              }
               mut.mutate();
             }}
             className="auth-page-form"
@@ -85,10 +151,17 @@ export default function Signup() {
                 className="form-input"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                placeholder="사용할 아이디를 입력하세요"
+                placeholder="사용할 아이디를 입력하세요 (3-20자)"
                 required
                 autoComplete="username"
+                minLength={3}
+                maxLength={20}
               />
+              {username && (username.length < 3 || username.length > 20) && (
+                <span className="form-error-text">
+                  사용자명은 3-20자 사이여야 합니다
+                </span>
+              )}
             </div>
 
             <div className="form-group">
@@ -102,9 +175,10 @@ export default function Signup() {
                   className="form-input"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="비밀번호를 입력하세요"
+                  placeholder="비밀번호를 입력하세요 (6자 이상)"
                   required
                   autoComplete="new-password"
+                  minLength={6}
                 />
                 <button
                   type="button"
@@ -131,23 +205,23 @@ export default function Signup() {
               )}
 
               <div className="auth-password-requirements">
-                <div className={`auth-requirement ${password.length >= 8 ? "auth-requirement--met" : ""}`}>
+                <div className={`auth-requirement ${password.length >= 6 ? "auth-requirement--met" : ""}`}>
                   <span className="auth-requirement-icon">
-                    {password.length >= 8 ? "✓" : "○"}
+                    {password.length >= 6 ? "✓" : "○"}
                   </span>
-                  <span>최소 8자 이상</span>
+                  <span>최소 6자 이상</span>
                 </div>
                 <div className={`auth-requirement ${/[A-Z]/.test(password) ? "auth-requirement--met" : ""}`}>
                   <span className="auth-requirement-icon">
                     {/[A-Z]/.test(password) ? "✓" : "○"}
                   </span>
-                  <span>대문자 포함</span>
+                  <span>대문자 포함 (권장)</span>
                 </div>
                 <div className={`auth-requirement ${/[0-9]/.test(password) ? "auth-requirement--met" : ""}`}>
                   <span className="auth-requirement-icon">
                     {/[0-9]/.test(password) ? "✓" : "○"}
                   </span>
-                  <span>숫자 포함</span>
+                  <span>숫자 포함 (권장)</span>
                 </div>
               </div>
             </div>
@@ -181,14 +255,15 @@ export default function Signup() {
                 onChange={(e) => setAgreedToTerms(e.target.checked)}
               />
               <label htmlFor="terms" className="auth-terms-label">
-                <a href="#">이용약관</a> 및 <a href="#">개인정보처리방침</a>에 동의합니다
+                <a href="#" onClick={(e) => e.preventDefault()}>이용약관</a> 및{" "}
+                <a href="#" onClick={(e) => e.preventDefault()}>개인정보처리방침</a>에 동의합니다
               </label>
             </div>
 
             <button
               type="submit"
               className="auth-submit-btn"
-              disabled={mut.isPending || !agreedToTerms}
+              disabled={mut.isPending || !agreedToTerms || password !== confirmPassword || username.length < 3 || password.length < 6}
             >
               {mut.isPending ? (
                 <>
@@ -203,7 +278,7 @@ export default function Signup() {
             {mut.isError && (
               <div className="ui-error-message">
                 <span>⚠️</span>
-                회원가입에 실패했습니다. {mut.error?.message || "이미 사용 중인 아이디일 수 있습니다."}
+                {getErrorMessage()}
               </div>
             )}
           </form>
