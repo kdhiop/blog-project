@@ -14,10 +14,6 @@ interface ShellProps {
   children: ReactNode;
 }
 
-interface ProtectedRouteProps {
-  children: ReactNode;
-}
-
 function Shell({ children }: ShellProps) {
   return (
     <ErrorBoundary>
@@ -29,16 +25,7 @@ function Shell({ children }: ShellProps) {
   );
 }
 
-function ProtectedRoute({ children }: ProtectedRouteProps) {
-  return (
-    <Shell>
-      <RequireAuth>
-        {children}
-      </RequireAuth>
-    </Shell>
-  );
-}
-
+// ProtectedRoute를 제거하고 직접 RequireAuth를 사용
 export const router = createBrowserRouter(
   createRoutesFromElements(
     <>
@@ -46,7 +33,15 @@ export const router = createBrowserRouter(
       <Route path="/posts/:id" element={<Shell><PostDetail /></Shell>} />
       <Route path="/login" element={<Shell><Login /></Shell>} />
       <Route path="/signup" element={<Shell><Signup /></Shell>} />
-      <Route path="/new" element={<ProtectedRoute><NewPost /></ProtectedRoute>} />
+      {/* 보호된 라우트 - RequireAuth 컴포넌트가 자체적으로 Outlet을 렌더링 */}
+      <Route path="/new" element={
+        <Shell>
+          <RequireAuth />
+        </Shell>
+      } >
+        {/* 중첩 라우트로 NewPost 컴포넌트 배치 */}
+        <Route index element={<NewPost />} />
+      </Route>
       
       {/* 404 처리 */}
       <Route path="*" element={
