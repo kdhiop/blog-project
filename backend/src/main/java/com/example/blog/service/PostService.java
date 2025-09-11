@@ -1,4 +1,3 @@
-// PostService.java
 package com.example.blog.service;
 
 import com.example.blog.model.Post;
@@ -14,7 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 
 @Service
-@Transactional
+@Transactional(readOnly = true)
 public class PostService {
     
     private static final Logger logger = LoggerFactory.getLogger(PostService.class);
@@ -27,7 +26,6 @@ public class PostService {
         this.userRepository = userRepository;
     }
 
-    @Transactional(readOnly = true)
     public List<Post> listAll() { 
         try {
             List<Post> posts = postRepository.findAll();
@@ -35,11 +33,10 @@ public class PostService {
             return posts;
         } catch (Exception e) {
             logger.error("게시글 목록 조회 중 오류: {}", e.getMessage(), e);
-            throw new RuntimeException("게시글 목록을 불러오는 중 오류가 발생했습니다");
+            throw new RuntimeException("게시글 목록을 불러오는 중 오류가 발생했습니다", e);
         }
     }
 
-    @Transactional(readOnly = true)
     public Post get(Long id) { 
         if (id == null) {
             logger.warn("null ID로 게시글 조회 시도");
@@ -56,26 +53,14 @@ public class PostService {
             throw e;
         } catch (Exception e) {
             logger.error("게시글 조회 중 오류: postId={}", id, e);
-            throw new RuntimeException("게시글을 조회하는 중 오류가 발생했습니다");
+            throw new RuntimeException("게시글을 조회하는 중 오류가 발생했습니다", e);
         }
     }
 
+    @Transactional
     public Post create(Long userId, String title, String content) {
         // 입력값 검증
-        if (userId == null) {
-            logger.warn("null 사용자 ID로 게시글 작성 시도");
-            throw new IllegalArgumentException("사용자 ID는 필수입니다");
-        }
-        
-        if (title == null || title.trim().isEmpty()) {
-            logger.warn("빈 제목으로 게시글 작성 시도");
-            throw new IllegalArgumentException("제목은 필수입니다");
-        }
-        
-        if (content == null || content.trim().isEmpty()) {
-            logger.warn("빈 내용으로 게시글 작성 시도");
-            throw new IllegalArgumentException("내용은 필수입니다");
-        }
+        validateCreateInput(userId, title, content);
         
         try {
             User author = userRepository.findById(userId)
@@ -90,31 +75,22 @@ public class PostService {
             post.setAuthor(author);
             
             Post savedPost = postRepository.save(post);
-            logger.info("게시글 작성 완료: postId={}, userId={}", savedPost.getId(), userId);
+            logger.info("게시글 작성 완료: postId={}, userId={}, title='{}'", 
+                       savedPost.getId(), userId, title);
             
             return savedPost;
         } catch (RuntimeException e) {
             throw e;
         } catch (Exception e) {
             logger.error("게시글 작성 중 오류: userId={}", userId, e);
-            throw new RuntimeException("게시글 작성 중 오류가 발생했습니다");
+            throw new RuntimeException("게시글 작성 중 오류가 발생했습니다", e);
         }
     }
 
+    @Transactional
     public Post update(Long id, Long userId, String title, String content) {
         // 입력값 검증
-        if (id == null) {
-            throw new IllegalArgumentException("게시글 ID는 필수입니다");
-        }
-        if (userId == null) {
-            throw new IllegalArgumentException("사용자 ID는 필수입니다");
-        }
-        if (title == null || title.trim().isEmpty()) {
-            throw new IllegalArgumentException("제목은 필수입니다");
-        }
-        if (content == null || content.trim().isEmpty()) {
-            throw new IllegalArgumentException("내용은 필수입니다");
-        }
+        validateUpdateInput(id, userId, title, content);
         
         try {
             Post post = postRepository.findById(id)
@@ -123,41 +99,29 @@ public class PostService {
                     return new RuntimeException("게시글을 찾을 수 없습니다");
                 });
             
-            // 작성자 권한 확인 - SecurityException을 먼저 처리
-            if (post.getAuthor() == null || !post.getAuthor().getId().equals(userId)) {
-                logger.warn("권한 없는 게시글 수정 시도: postId={}, userId={}, authorId={}", 
-                           id, userId, post.getAuthor() != null ? post.getAuthor().getId() : null);
-                throw new SecurityException("게시글을 수정할 권한이 없습니다");
-            }
+            // 작성자 권한 확인
+            validateAuthorPermission(post, userId, "수정");
             
             post.setTitle(title.trim());
             post.setContent(content.trim());
             
             Post updatedPost = postRepository.save(post);
-            logger.info("게시글 수정 완료: postId={}, userId={}", id, userId);
+            logger.info("게시글 수정 완료: postId={}, userId={}, title='{}'", id, userId, title);
             
             return updatedPost;
             
-        } catch (SecurityException e) {
-            // SecurityException을 먼저 처리
-            throw e;
-        } catch (RuntimeException e) {
-            // 다른 RuntimeException들 처리
+        } catch (SecurityException | RuntimeException e) {
             throw e;
         } catch (Exception e) {
             logger.error("게시글 수정 중 오류: postId={}, userId={}", id, userId, e);
-            throw new RuntimeException("게시글 수정 중 오류가 발생했습니다");
+            throw new RuntimeException("게시글 수정 중 오료가 발생했습니다", e);
         }
     }
 
+    @Transactional
     public void delete(Long id, Long userId) {
         // 입력값 검증
-        if (id == null) {
-            throw new IllegalArgumentException("게시글 ID는 필수입니다");
-        }
-        if (userId == null) {
-            throw new IllegalArgumentException("사용자 ID는 필수입니다");
-        }
+        validateDeleteInput(id, userId);
         
         try {
             Post post = postRepository.findById(id)
@@ -166,25 +130,74 @@ public class PostService {
                     return new RuntimeException("게시글을 찾을 수 없습니다");
                 });
             
-            // 작성자 권한 확인 - SecurityException을 먼저 처리
-            if (post.getAuthor() == null || !post.getAuthor().getId().equals(userId)) {
-                logger.warn("권한 없는 게시글 삭제 시도: postId={}, userId={}, authorId={}", 
-                           id, userId, post.getAuthor() != null ? post.getAuthor().getId() : null);
-                throw new SecurityException("게시글을 삭제할 권한이 없습니다");
-            }
+            // 작성자 권한 확인
+            validateAuthorPermission(post, userId, "삭제");
             
             postRepository.deleteById(id);
             logger.info("게시글 삭제 완료: postId={}, userId={}", id, userId);
             
-        } catch (SecurityException e) {
-            // SecurityException을 먼저 처리
-            throw e;
-        } catch (RuntimeException e) {
-            // 다른 RuntimeException들 처리
+        } catch (SecurityException | RuntimeException e) {
             throw e;
         } catch (Exception e) {
             logger.error("게시글 삭제 중 오류: postId={}, userId={}", id, userId, e);
-            throw new RuntimeException("게시글 삭제 중 오류가 발생했습니다");
+            throw new RuntimeException("게시글 삭제 중 오류가 발생했습니다", e);
+        }
+    }
+
+    // 입력값 검증 메소드들
+    private void validateCreateInput(Long userId, String title, String content) {
+        if (userId == null) {
+            logger.warn("null 사용자 ID로 게시글 작성 시도");
+            throw new IllegalArgumentException("사용자 ID는 필수입니다");
+        }
+        validateTitleAndContent(title, content);
+    }
+
+    private void validateUpdateInput(Long id, Long userId, String title, String content) {
+        if (id == null) {
+            throw new IllegalArgumentException("게시글 ID는 필수입니다");
+        }
+        if (userId == null) {
+            throw new IllegalArgumentException("사용자 ID는 필수입니다");
+        }
+        validateTitleAndContent(title, content);
+    }
+
+    private void validateDeleteInput(Long id, Long userId) {
+        if (id == null) {
+            throw new IllegalArgumentException("게시글 ID는 필수입니다");
+        }
+        if (userId == null) {
+            throw new IllegalArgumentException("사용자 ID는 필수입니다");
+        }
+    }
+
+    private void validateTitleAndContent(String title, String content) {
+        if (title == null || title.trim().isEmpty()) {
+            logger.warn("빈 제목으로 게시글 작업 시도");
+            throw new IllegalArgumentException("제목은 필수입니다");
+        }
+        
+        if (content == null || content.trim().isEmpty()) {
+            logger.warn("빈 내용으로 게시글 작업 시도");
+            throw new IllegalArgumentException("내용은 필수입니다");
+        }
+
+        if (title.trim().length() > 100) {
+            throw new IllegalArgumentException("제목은 100자를 초과할 수 없습니다");
+        }
+
+        if (content.trim().length() > 2000) {
+            throw new IllegalArgumentException("내용은 2000자를 초과할 수 없습니다");
+        }
+    }
+
+    private void validateAuthorPermission(Post post, Long userId, String action) {
+        if (post.getAuthor() == null || !post.getAuthor().getId().equals(userId)) {
+            logger.warn("권한 없는 게시글 {} 시도: postId={}, userId={}, authorId={}", 
+                       action, post.getId(), userId, 
+                       post.getAuthor() != null ? post.getAuthor().getId() : null);
+            throw new SecurityException("게시글을 " + action + "할 권한이 없습니다");
         }
     }
 }

@@ -19,23 +19,32 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   // 토큰 및 사용자 정보 저장
   const login = useCallback((token: string, userData: User) => {
-    localStorage.setItem("auth:token", token);
-    localStorage.setItem("auth:user", JSON.stringify(userData));
-    setUser(userData);
+    try {
+      localStorage.setItem("auth:token", token);
+      localStorage.setItem("auth:user", JSON.stringify(userData));
+      setUser(userData);
+    } catch (error) {
+      console.error("로그인 정보 저장 실패:", error);
+      // localStorage가 사용 불가능한 경우 메모리에만 저장
+      setUser(userData);
+    }
   }, []);
 
   // 로그아웃
   const logout = useCallback(() => {
-    localStorage.removeItem("auth:token");
-    localStorage.removeItem("auth:user");
+    try {
+      localStorage.removeItem("auth:token");
+      localStorage.removeItem("auth:user");
+    } catch (error) {
+      console.warn("로그아웃 시 localStorage 정리 실패:", error);
+    }
     setUser(null);
   }, []);
 
   // 토큰 유효성 검증
   const checkAuth = useCallback(async () => {
     const token = localStorage.getItem("auth:token");
-    const storedUser = localStorage.getItem("auth:user");
-
+    
     if (!token) {
       setIsLoading(false);
       return;

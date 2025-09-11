@@ -1,26 +1,55 @@
 package com.example.blog.model;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
+
+import java.time.LocalDateTime;
 
 @Entity
+@Table(name = "comments", indexes = {
+    @Index(name = "idx_comment_post_id", columnList = "post_id"),
+    @Index(name = "idx_comment_author_id", columnList = "author_id"),
+    @Index(name = "idx_comment_created_at", columnList = "created_at")
+})
 public class Comment {
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    
+    @Id 
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(length = 1000)
+    @Column(nullable = false, length = 1000)
+    @Lob
     private String content;
 
-    @ManyToOne
-    @JoinColumn(name = "post_id")
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "post_id", nullable = false)
     private Post post;
 
-    @ManyToOne
-    @JoinColumn(name = "author_id")
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "author_id", nullable = false)
     private User author;
 
-    public Comment() {}
-    public Comment(String content) { this.content = content; }
+    @CreationTimestamp
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private LocalDateTime createdAt;
 
+    @UpdateTimestamp
+    @Column(name = "updated_at", nullable = false)
+    private LocalDateTime updatedAt;
+
+    @Version
+    private Long version;
+
+    // 기본 생성자
+    public Comment() {}
+
+    // 편의 생성자
+    public Comment(String content) { 
+        this.content = content; 
+    }
+
+    // Getters and Setters
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 
@@ -32,4 +61,20 @@ public class Comment {
 
     public User getAuthor() { return author; }
     public void setAuthor(User author) { this.author = author; }
+
+    public LocalDateTime getCreatedAt() { return createdAt; }
+    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+
+    public LocalDateTime getUpdatedAt() { return updatedAt; }
+    public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
+
+    public Long getVersion() { return version; }
+    public void setVersion(Long version) { this.version = version; }
+
+    @Override
+    public String toString() {
+        return "Comment{id=" + id + ", content='" + 
+               (content.length() > 50 ? content.substring(0, 50) + "..." : content) + 
+               "', author=" + (author != null ? author.getUsername() : "null") + "}";
+    }
 }

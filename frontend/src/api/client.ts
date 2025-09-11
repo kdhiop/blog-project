@@ -60,32 +60,15 @@ client.interceptors.response.use(
 
         // 401 에러 처리 (인증 만료)
         if (error.response?.status === 401) {
-            // 토큰이 유효하지 않거나 만료됨
             localStorage.removeItem("auth:token");
             localStorage.removeItem("auth:user");
 
-            // 현재 경로가 로그인/회원가입 페이지가 아닌 경우에만 리다이렉트
             const currentPath = window.location.pathname;
             if (currentPath !== "/login" && currentPath !== "/signup") {
-                // 현재 페이지를 from 파라미터로 저장하여 로그인 후 돌아갈 수 있도록 함
                 const returnUrl = encodeURIComponent(currentPath);
-                window.location.href = `/login?from=${returnUrl}`;
+                // replace 사용으로 뒤로가기 무한루프 방지
+                window.location.replace(`/login?from=${returnUrl}`);
             }
-        }
-
-        // 403 에러 처리 (권한 없음)
-        if (error.response?.status === 403) {
-            console.warn("API 접근 권한이 없습니다:", error.response.data);
-        }
-
-        // 404 에러 처리
-        if (error.response?.status === 404) {
-            console.warn("API 리소스를 찾을 수 없습니다:", error.config?.url);
-        }
-
-        // 500 에러 처리
-        if (error.response?.status >= 500) {
-            console.error("서버 내부 오류:", error.response.data);
         }
 
         return Promise.reject(error);
