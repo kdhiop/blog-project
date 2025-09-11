@@ -39,7 +39,8 @@ public class CommentService {
         }
         
         try {
-            List<Comment> comments = commentRepository.findByPostId(postId);
+            // JOIN FETCH를 사용하여 Author 정보도 함께 가져오기
+            List<Comment> comments = commentRepository.findByPostIdWithAuthor(postId);
             logger.debug("댓글 목록 조회 완료: postId={}, count={}", postId, comments.size());
             return comments;
         } catch (Exception e) {
@@ -104,7 +105,8 @@ public class CommentService {
         }
         
         try {
-            Comment comment = commentRepository.findById(commentId)
+            // Author 정보와 함께 댓글 조회
+            Comment comment = commentRepository.findByIdWithAuthor(commentId)
                 .orElseThrow(() -> {
                     logger.warn("존재하지 않는 댓글 수정 시도: commentId={}", commentId);
                     return new RuntimeException("댓글을 찾을 수 없습니다");
@@ -127,6 +129,9 @@ public class CommentService {
         } catch (SecurityException e) {
             // SecurityException을 먼저 처리
             throw e;
+        } catch (IllegalArgumentException e) {
+            // IllegalArgumentException 처리
+            throw e;
         } catch (RuntimeException e) {
             // 다른 RuntimeException들 처리
             throw e;
@@ -146,7 +151,8 @@ public class CommentService {
         }
         
         try {
-            Comment comment = commentRepository.findById(commentId)
+            // Author 정보와 함께 댓글 조회
+            Comment comment = commentRepository.findByIdWithAuthor(commentId)
                 .orElseThrow(() -> {
                     logger.warn("존재하지 않는 댓글 삭제 시도: commentId={}", commentId);
                     return new RuntimeException("댓글을 찾을 수 없습니다");
@@ -164,6 +170,9 @@ public class CommentService {
             
         } catch (SecurityException e) {
             // SecurityException을 먼저 처리
+            throw e;
+        } catch (IllegalArgumentException e) {
+            // IllegalArgumentException 처리
             throw e;
         } catch (RuntimeException e) {
             // 다른 RuntimeException들 처리
