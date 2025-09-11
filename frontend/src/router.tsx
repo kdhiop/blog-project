@@ -7,8 +7,18 @@ import Signup from "./pages/Signup";
 import RequireAuth from "./components/RequireAuth";
 import Navbar from "./components/Navbar";
 import { ErrorBoundary } from "./components/ErrorBoundary";
+import { type ReactNode } from "react";
 
-function Shell({ children }: { children: React.ReactNode }) {
+// 타입 정의 추가
+interface ShellProps {
+  children: ReactNode;
+}
+
+interface ProtectedRouteProps {
+  children: ReactNode;
+}
+
+function Shell({ children }: ShellProps) {
   return (
     <ErrorBoundary>
       <div className="app-shell">
@@ -19,7 +29,7 @@ function Shell({ children }: { children: React.ReactNode }) {
   );
 }
 
-function ProtectedRoute({ children }: { children: React.ReactNode }) {
+function ProtectedRoute({ children }: ProtectedRouteProps) {
   return (
     <Shell>
       <RequireAuth>
