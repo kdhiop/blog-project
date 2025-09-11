@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { fetchUserByUsername, login } from "../api/auth";
+import { login } from "../api/auth";
 import { useAuth } from "../context/AuthContext";
 import { useLocation, useNavigate, Link } from "react-router-dom";
 
@@ -16,14 +16,17 @@ export default function Login() {
 
   const mut = useMutation({
     mutationFn: async () => {
-      const ok = await login({ username, password });
-      if (!ok) throw new Error("login failed");
-      const user = await fetchUserByUsername(username);
-      setAuth(user);
+      const response = await login({ username, password });
+      return response;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      // JWT 토큰과 사용자 정보를 AuthContext에 저장
+      setAuth(data.token, data.user);
       nav(loc.state?.from ?? "/");
     },
+    onError: (error) => {
+      console.error("로그인 실패:", error);
+    }
   });
 
   return (
@@ -105,11 +108,19 @@ export default function Login() {
               className="auth-submit-btn"
               disabled={mut.isPending}
             >
-              {mut.isPending ? "로그인 중..." : "로그인"}
+              {mut.isPending ? (
+                <>
+                  <span className="ui-spinner-small"></span>
+                  로그인 중...
+                </>
+              ) : (
+                "로그인"
+              )}
             </button>
 
             {mut.isError && (
               <div className="ui-error-message">
+                <span>⚠️</span>
                 로그인에 실패했습니다. 아이디와 비밀번호를 확인해주세요.
               </div>
             )}

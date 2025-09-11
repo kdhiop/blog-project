@@ -1,5 +1,4 @@
-import axios from "axios";
-const BASE = "http://localhost:8080";
+import client from "./client";
 
 export interface Post {
   id: number;
@@ -28,26 +27,26 @@ const mapBackendPost = (post: BackendPostResponse): Post => ({
   } : undefined
 });
 
-export const getPosts = async () => {
-  const res = await axios.get<BackendPostResponse[]>(`${BASE}/posts`);
+export const getPosts = async (): Promise<Post[]> => {
+  const res = await client.get<BackendPostResponse[]>("/posts");
   return res.data.map(mapBackendPost);
 };
 
-export const getPost = async (id: number) => {
-  const res = await axios.get<BackendPostResponse>(`${BASE}/posts/${id}`);
+export const getPost = async (id: number): Promise<Post> => {
+  const res = await client.get<BackendPostResponse>(`/posts/${id}`);
   return mapBackendPost(res.data);
 };
 
-export const createPost = async (userId: number, payload: { title: string; content: string }) => {
-  const res = await axios.post<BackendPostResponse>(`${BASE}/posts`, payload, { params: { userId } });
+export const createPost = async (payload: { title: string; content: string }): Promise<Post> => {
+  const res = await client.post<BackendPostResponse>("/posts", payload);
   return mapBackendPost(res.data);
 };
 
-export const updatePost = async (id: number, userId: number, payload: { title: string; content: string }) => {
-  const res = await axios.put<BackendPostResponse>(`${BASE}/posts/${id}`, payload, { params: { userId } });
+export const updatePost = async (id: number, payload: { title: string; content: string }): Promise<Post> => {
+  const res = await client.put<BackendPostResponse>(`/posts/${id}`, payload);
   return mapBackendPost(res.data);
 };
 
-export const deletePost = async (id: number, userId: number) => {
-  await axios.delete(`${BASE}/posts/${id}`, { params: { userId } });
+export const deletePost = async (id: number): Promise<void> => {
+  await client.delete(`/posts/${id}`);
 };

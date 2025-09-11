@@ -14,11 +14,14 @@ export default function NewPost() {
   const [isPreview, setIsPreview] = useState(false);
 
   const mut = useMutation({
-    mutationFn: () => createPost(user!.id, { title, content }),
+    mutationFn: () => createPost({ title, content }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["posts"] });
       nav("/");
     },
+    onError: (error) => {
+      console.error("게시글 작성 실패:", error);
+    }
   });
 
   const handleCancel = () => {
@@ -33,6 +36,25 @@ export default function NewPost() {
 
   const charCount = content.length;
   const maxChars = 2000;
+
+  // 인증되지 않은 사용자 처리
+  if (!user) {
+    return (
+      <div className="new-post-container">
+        <div className="ui-error-container">
+          <span className="ui-error-icon">🔒</span>
+          <h2>로그인이 필요합니다</h2>
+          <p>게시글을 작성하려면 먼저 로그인해주세요.</p>
+          <button
+            onClick={() => nav("/login")}
+            className="ui-btn ui-btn-primary"
+          >
+            로그인하러 가기
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="new-post-container">
@@ -62,7 +84,6 @@ export default function NewPost() {
               <form
                 onSubmit={(e) => {
                   e.preventDefault();
-                  if (!user) return alert("로그인 후 작성하세요.");
                   mut.mutate();
                 }}
                 className="new-post-form"

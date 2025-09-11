@@ -59,16 +59,19 @@ export default function PostDetail() {
 
   // 댓글 추가
   const addCommentMut = useMutation({
-    mutationFn: () => addComment(postId, user!.id, { content: text }),
+    mutationFn: () => addComment(postId, { content: text }),
     onSuccess: () => {
       setText("");
       qc.invalidateQueries({ queryKey: ["comments", postId] });
     },
+    onError: (error) => {
+      console.error("댓글 작성 실패:", error);
+    }
   });
 
   // 게시글 수정
   const updatePostMut = useMutation({
-    mutationFn: () => updatePost(postId, user!.id, { title: editTitle, content: editContent }),
+    mutationFn: () => updatePost(postId, { title: editTitle, content: editContent }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["post", postId] });
       setIsEditingPost(false);
@@ -81,7 +84,7 @@ export default function PostDetail() {
 
   // 게시글 삭제
   const deletePostMut = useMutation({
-    mutationFn: () => deletePost(postId, user!.id),
+    mutationFn: () => deletePost(postId),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["posts"] });
       navigate("/");
@@ -95,7 +98,7 @@ export default function PostDetail() {
   // 댓글 수정
   const updateCommentMut = useMutation({
     mutationFn: (commentId: number) =>
-      updateComment(postId, commentId, user!.id, { content: editCommentText }),
+      updateComment(postId, commentId, { content: editCommentText }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["comments", postId] });
       cancelEditComment();
@@ -108,7 +111,7 @@ export default function PostDetail() {
 
   // 댓글 삭제
   const deleteCommentMut = useMutation({
-    mutationFn: (commentId: number) => deleteComment(postId, commentId, user!.id),
+    mutationFn: (commentId: number) => deleteComment(postId, commentId),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["comments", postId] });
     },

@@ -1,26 +1,32 @@
-import axios from "axios";
-
-const BASE = "http://localhost:8080";
+import client from "./client";
 
 export interface User {
-  id: number;
-  username: string;
+    id: number;
+    username: string;
 }
 
-export const register = async (payload: { username: string; password: string }) => {
-  const res = await axios.post(`${BASE}/auth/register`, payload);
-  // res.data: { id, username, password: "<hashed>" }  ← 백엔드 그대로
-  return { id: res.data.id as number, username: res.data.username as string } as User;
+export interface LoginResponse {
+    token: string;
+    user: User;
+}
+
+export const register = async (payload: { username: string; password: string }): Promise<User> => {
+    const res = await client.post<User>("/auth/register", payload);
+    return res.data;
 };
 
-export const login = async (payload: { username: string; password: string }) => {
-  // 성공 시 200 + "로그인 성공"
-  const res = await axios.post(`${BASE}/auth/login`, payload, { responseType: "text" });
-  if (res.status === 200) return true;
-  return false;
+export const login = async (payload: { username: string; password: string }): Promise<LoginResponse> => {
+    const res = await client.post<LoginResponse>("/auth/login", payload);
+    return res.data;
 };
 
-export const fetchUserByUsername = async (username: string) => {
-  const res = await axios.get(`${BASE}/auth/user`, { params: { username } });
-  return { id: res.data.id as number, username: res.data.username as string } as User;
+export const getCurrentUser = async (): Promise<User> => {
+    const res = await client.get<User>("/auth/me");
+    return res.data;
+};
+
+// 호환성을 위해 유지 (필요시 제거 가능)
+export const fetchUserByUsername = async (username: string): Promise<User> => {
+    const res = await client.get<User>("/auth/user", { params: { username } });
+    return res.data;
 };

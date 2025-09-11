@@ -2,7 +2,7 @@ import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
 export default function Navbar() {
-  const { user, logout } = useAuth();
+  const { user, logout, isLoading } = useAuth();
   const location = useLocation();
 
   const isActive = (path: string) => location.pathname === path;
@@ -35,7 +35,12 @@ export default function Navbar() {
         </div>
 
         <div className="nav-auth">
-          {user ? (
+          {isLoading ? (
+            <div className="nav-user-info">
+              <div className="ui-spinner-small"></div>
+              <span>로딩...</span>
+            </div>
+          ) : user ? (
             <div className="nav-user-menu">
               <div className="nav-user-info">
                 <span className="nav-user-avatar">👤</span>

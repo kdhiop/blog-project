@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { register } from "../api/auth";
+import { register, login } from "../api/auth";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate, Link } from "react-router-dom";
 
@@ -11,7 +11,7 @@ export default function Signup() {
   const [showPassword, setShowPassword] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
 
-  const { login } = useAuth();
+  const { login: setAuth } = useAuth();
   const nav = useNavigate();
 
   const mut = useMutation({
@@ -19,10 +19,23 @@ export default function Signup() {
       if (password !== confirmPassword) {
         throw new Error("비밀번호가 일치하지 않습니다");
       }
+
+      // 1. 회원가입
       const user = await register({ username, password });
-      login(user);
+
+      // 2. 바로 로그인하여 토큰 받기
+      const loginResponse = await login({ username, password });
+
+      return { user, loginResponse };
     },
-    onSuccess: () => nav("/"),
+    onSuccess: (data) => {
+      // JWT 토큰과 사용자 정보를 AuthContext에 저장
+      setAuth(data.loginResponse.token, data.loginResponse.user);
+      nav("/");
+    },
+    onError: (error) => {
+      console.error("회원가입 실패:", error);
+    }
   });
 
   // 비밀번호 강도 체크
@@ -177,11 +190,19 @@ export default function Signup() {
               className="auth-submit-btn"
               disabled={mut.isPending || !agreedToTerms}
             >
-              {mut.isPending ? "가입 중..." : "회원가입"}
+              {mut.isPending ? (
+                <>
+                  <span className="ui-spinner-small"></span>
+                  가입 중...
+                </>
+              ) : (
+                "회원가입"
+              )}
             </button>
 
             {mut.isError && (
               <div className="ui-error-message">
+                <span>⚠️</span>
                 회원가입에 실패했습니다. {mut.error?.message || "이미 사용 중인 아이디일 수 있습니다."}
               </div>
             )}
