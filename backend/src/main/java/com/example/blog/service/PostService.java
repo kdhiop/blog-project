@@ -113,7 +113,14 @@ public class PostService {
             
             return updatedPost;
             
-        } catch (SecurityException | RuntimeException e) {
+        } catch (SecurityException e) {
+            // SecurityException을 먼저 처리
+            throw e;
+        } catch (IllegalArgumentException e) {
+            // IllegalArgumentException 처리
+            throw e;
+        } catch (RuntimeException e) {
+            // 다른 RuntimeException들 처리
             throw e;
         } catch (Exception e) {
             logger.error("게시글 수정 중 오류: postId={}, userId={}", id, userId, e);
@@ -139,7 +146,14 @@ public class PostService {
             postRepository.deleteById(id);
             logger.info("게시글 삭제 완료: postId={}, userId={}", id, userId);
             
-        } catch (SecurityException | RuntimeException e) {
+        } catch (SecurityException e) {
+            // SecurityException을 먼저 처리
+            throw e;
+        } catch (IllegalArgumentException e) {
+            // IllegalArgumentException 처리
+            throw e;
+        } catch (RuntimeException e) {
+            // 다른 RuntimeException들 처리
             throw e;
         } catch (Exception e) {
             logger.error("게시글 삭제 중 오류: postId={}, userId={}", id, userId, e);
