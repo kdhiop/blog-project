@@ -26,9 +26,11 @@ public class PostService {
         this.userRepository = userRepository;
     }
 
+    @Transactional(readOnly = true)  // 명시적 트랜잭션 설정
     public List<Post> listAll() { 
         try {
-            List<Post> posts = postRepository.findAllOrderByIdDesc();
+            // JOIN FETCH로 Author 정보도 함께 가져와서 Lazy Loading 문제 해결
+            List<Post> posts = postRepository.findAllWithAuthor();
             logger.debug("게시글 목록 조회 완료: {} 개", posts.size());
             return posts;
         } catch (Exception e) {
@@ -37,6 +39,7 @@ public class PostService {
         }
     }
 
+    @Transactional(readOnly = true)
     public Post get(Long id) { 
         if (id == null) {
             logger.warn("null ID로 게시글 조회 시도");

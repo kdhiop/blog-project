@@ -12,11 +12,16 @@ import java.util.Optional;
 
 public interface PostRepository extends JpaRepository<Post, Long> {
     
+    // *** 새로 추가된 메소드 - Lazy Loading 문제 해결용 ***
+    // 전체 조회 시 Author 정보도 함께 가져오기 (N+1 문제 해결)
+    @Query("SELECT p FROM Post p LEFT JOIN FETCH p.author ORDER BY p.id DESC")
+    List<Post> findAllWithAuthor();
+    
     // 페이징 지원 (최신순)
     @Query("SELECT p FROM Post p ORDER BY p.id DESC")
     Page<Post> findAllOrderByIdDesc(Pageable pageable);
     
-    // 전체 조회 (최신순)
+    // 전체 조회 (최신순) - 기존 메소드 유지 (하위 호환성)
     @Query("SELECT p FROM Post p ORDER BY p.id DESC")
     List<Post> findAllOrderByIdDesc();
     
