@@ -35,7 +35,11 @@ public class SecurityConfig {
 
 						// 나머지 모든 요청은 인증 필요
 						.anyRequest().authenticated())
-				.headers(headers -> headers.frameOptions().disable()) // H2 Console을 위해
+				.headers(headers -> headers
+						// H2 Console을 위한 프레임 옵션 비활성화
+						.frameOptions().disable()
+						// 기본 보안 헤더 추가
+						.contentTypeOptions().and())
 				.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
 		return http.build();
@@ -43,6 +47,6 @@ public class SecurityConfig {
 
 	@Bean
 	BCryptPasswordEncoder passwordEncoder() {
-		return new BCryptPasswordEncoder();
+		return new BCryptPasswordEncoder(12); // 더 강력한 암호화 강도
 	}
 }
