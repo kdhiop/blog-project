@@ -31,11 +31,14 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/auth/login", "/auth/register").permitAll()
                 .requestMatchers("/h2-console/**").permitAll()
-                .requestMatchers(HttpMethod.GET, "/posts/**").permitAll()
+                .requestMatchers("/error").permitAll()
+                .requestMatchers("/actuator/health").permitAll()
+                .requestMatchers(HttpMethod.GET, "/posts", "/posts/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/posts/*/comments").permitAll()
                 .anyRequest().authenticated())
             .headers(headers -> headers
                 .frameOptions(frameOptions -> frameOptions.sameOrigin())
-                .contentTypeOptions(contentTypeOptions -> {})
+                .contentTypeOptions(contentTypeOptions -> contentTypeOptions.and())
                 .httpStrictTransportSecurity(hstsConfig -> hstsConfig
                     .maxAgeInSeconds(31536000)
                     .includeSubDomains(true))

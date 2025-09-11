@@ -28,19 +28,17 @@ public class JwtTokenProvider {
         logger.info("JWT Provider initialized with validity: {} ms", validityInMilliseconds);
     }
 
-    // 토큰 생성
+    // 토큰 생성 - JJWT 0.12.x 버전에 맞게 수정
     public String createToken(String username, Long userId) {
         try {
-            Claims claims = Jwts.claims().setSubject(username);
-            claims.put("userId", userId);
-
             Date now = new Date();
             Date validity = new Date(now.getTime() + validityInMilliseconds);
 
             String token = Jwts.builder()
-                .setClaims(claims)
-                .setIssuedAt(now)
-                .setExpiration(validity)
+                .subject(username)  // setSubject 대신 subject 사용
+                .claim("userId", userId)  // 커스텀 클레임 추가
+                .issuedAt(now)      // setIssuedAt 대신 issuedAt 사용
+                .expiration(validity) // setExpiration 대신 expiration 사용
                 .signWith(secretKey, SignatureAlgorithm.HS256)
                 .compact();
 
@@ -55,11 +53,11 @@ public class JwtTokenProvider {
     // 토큰에서 username 추출
     public String getUsername(String token) {
         try {
-            return Jwts.parserBuilder()
-                .setSigningKey(secretKey)
+            return Jwts.parser()  // parserBuilder() 대신 parser() 사용
+                .verifyWith(secretKey)  // setSigningKey 대신 verifyWith 사용
                 .build()
-                .parseClaimsJws(token)
-                .getBody()
+                .parseSignedClaims(token)  // parseClaimsJws 대신 parseSignedClaims 사용
+                .getPayload()  // getBody 대신 getPayload 사용
                 .getSubject();
         } catch (JwtException | IllegalArgumentException e) {
             logger.warn("JWT 토큰에서 username 추출 실패: {}", e.getMessage());
@@ -70,11 +68,11 @@ public class JwtTokenProvider {
     // 토큰에서 userId 추출
     public Long getUserId(String token) {
         try {
-            Claims claims = Jwts.parserBuilder()
-                .setSigningKey(secretKey)
+            Claims claims = Jwts.parser()
+                .verifyWith(secretKey)
                 .build()
-                .parseClaimsJws(token)
-                .getBody();
+                .parseSignedClaims(token)
+                .getPayload();
 
             return claims.get("userId", Long.class);
         } catch (JwtException | IllegalArgumentException e) {
@@ -86,10 +84,10 @@ public class JwtTokenProvider {
     // 토큰 유효성 검증
     public boolean validateToken(String token) {
         try {
-            Jwts.parserBuilder()
-                .setSigningKey(secretKey)
+            Jwts.parser()
+                .verifyWith(secretKey)
                 .build()
-                .parseClaimsJws(token);
+                .parseSignedClaims(token);
             return true;
         } catch (SecurityException e) {
             logger.warn("JWT 서명 검증 실패: {}", e.getMessage());

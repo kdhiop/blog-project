@@ -18,8 +18,7 @@ public class Comment {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, length = 1000)
-    @Lob
+    @Column(nullable = false, length = 1000, columnDefinition = "TEXT")
     private String content;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -74,7 +73,7 @@ public class Comment {
     @Override
     public String toString() {
         return "Comment{id=" + id + ", content='" + 
-               (content.length() > 50 ? content.substring(0, 50) + "..." : content) + 
+               (content != null && content.length() > 50 ? content.substring(0, 50) + "..." : content) + 
                "', author=" + (author != null ? author.getUsername() : "null") + "}";
     }
 }

@@ -28,7 +28,7 @@ public class PostService {
 
     public List<Post> listAll() { 
         try {
-            List<Post> posts = postRepository.findAll();
+            List<Post> posts = postRepository.findAllOrderByIdDesc();
             logger.debug("게시글 목록 조회 완료: {} 개", posts.size());
             return posts;
         } catch (Exception e) {
@@ -44,7 +44,7 @@ public class PostService {
         }
         
         try {
-            return postRepository.findById(id)
+            return postRepository.findByIdWithAuthor(id)
                 .orElseThrow(() -> {
                     logger.warn("존재하지 않는 게시글: {}", id);
                     return new RuntimeException("게시글을 찾을 수 없습니다");
@@ -114,7 +114,7 @@ public class PostService {
             throw e;
         } catch (Exception e) {
             logger.error("게시글 수정 중 오류: postId={}, userId={}", id, userId, e);
-            throw new RuntimeException("게시글 수정 중 오료가 발생했습니다", e);
+            throw new RuntimeException("게시글 수정 중 오류가 발생했습니다", e);
         }
     }
 
