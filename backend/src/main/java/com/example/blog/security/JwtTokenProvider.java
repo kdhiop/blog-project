@@ -20,26 +20,30 @@ public class JwtTokenProvider {
     private final long validityInMilliseconds;
 
     public JwtTokenProvider(
-            @Value("${jwt.secret:defaultSecretKeyForBlogApplicationThatShouldBeChangedInProduction}") String secret,
-            @Value("${jwt.validity-in-ms:86400000}") long validityInMilliseconds // 24시간
+            @Value("${jwt.secret:aVerySecureSecretKeyForJWTTokenGenerationThatShouldBeAtLeast256BitsLongForHS256AlgorithmAndShouldBeChangedInProduction2024}") String secret,
+            @Value("${jwt.validity-in-ms:86400000}") long validityInMilliseconds
     ) {
+        // 키 길이 검증 추가
+        if (secret.length() < 32) {
+            throw new IllegalArgumentException("JWT secret must be at least 32 characters long");
+        }
         this.secretKey = Keys.hmacShaKeyFor(secret.getBytes());
         this.validityInMilliseconds = validityInMilliseconds;
         logger.info("JWT Provider initialized with validity: {} ms", validityInMilliseconds);
     }
 
-    // 토큰 생성 - JJWT 0.12.x 버전에 맞게 수정
     public String createToken(String username, Long userId) {
         try {
             Date now = new Date();
             Date validity = new Date(now.getTime() + validityInMilliseconds);
 
             String token = Jwts.builder()
-                .subject(username)  // setSubject 대신 subject 사용
-                .claim("userId", userId)  // 커스텀 클레임 추가
-                .issuedAt(now)      // setIssuedAt 대신 issuedAt 사용
-                .expiration(validity) // setExpiration 대신 expiration 사용
-                .signWith(secretKey, SignatureAlgorithm.HS256)
+                .subject(username)
+                .claim("userId", userId)
+                .claim("iat", now.getTime() / 1000) // issued at (seconds)
+                .issuedAt(now)
+                .expiration(validity)
+                .signWith(secretKey, Jwts.SIG.HS256) // 최신 방식
                 .compact();
 
             logger.debug("JWT 토큰 생성 완료: username={}, userId={}", username, userId);
@@ -50,14 +54,13 @@ public class JwtTokenProvider {
         }
     }
 
-    // 토큰에서 username 추출
     public String getUsername(String token) {
         try {
-            return Jwts.parser()  // parserBuilder() 대신 parser() 사용
-                .verifyWith(secretKey)  // setSigningKey 대신 verifyWith 사용
+            return Jwts.parser()
+                .verifyWith(secretKey)
                 .build()
-                .parseSignedClaims(token)  // parseClaimsJws 대신 parseSignedClaims 사용
-                .getPayload()  // getBody 대신 getPayload 사용
+                .parseSignedClaims(token)
+                .getPayload()
                 .getSubject();
         } catch (JwtException | IllegalArgumentException e) {
             logger.warn("JWT 토큰에서 username 추출 실패: {}", e.getMessage());
@@ -65,7 +68,6 @@ public class JwtTokenProvider {
         }
     }
 
-    // 토큰에서 userId 추출
     public Long getUserId(String token) {
         try {
             Claims claims = Jwts.parser()
@@ -74,40 +76,74 @@ public class JwtTokenProvider {
                 .parseSignedClaims(token)
                 .getPayload();
 
-            return claims.get("userId", Long.class);
+            Object userIdObj = claims.get("userId");
+            if (userIdObj instanceof Integer) {
+                return ((Integer) userIdObj).longValue();
+            } else if (userIdObj instanceof Long) {
+                return (Long) userIdObj;
+            } else {
+                logger.error("userId claim has unexpected type: {}", userIdObj != null ? userIdObj.getClass() : "null");
+                throw new SecurityException("토큰의 사용자 ID 형식이 올바르지 않습니다");
+            }
         } catch (JwtException | IllegalArgumentException e) {
             logger.warn("JWT 토큰에서 userId 추출 실패: {}", e.getMessage());
             throw new SecurityException("유효하지 않은 토큰입니다", e);
         }
     }
 
-    // 토큰 유효성 검증
     public boolean validateToken(String token) {
+        if (token == null || token.trim().isEmpty()) {
+            return false;
+        }
+        
         try {
-            Jwts.parser()
+            Claims claims = Jwts.parser()
                 .verifyWith(secretKey)
                 .build()
-                .parseSignedClaims(token);
+                .parseSignedClaims(token)
+                .getPayload();
+                
+            // 추가 검증: 필수 클레임 확인
+            if (claims.getSubject() == null || claims.get("userId") == null) {
+                logger.warn("JWT 토큰에 필수 클레임이 누락됨");
+                return false;
+            }
+            
             return true;
         } catch (SecurityException e) {
-            logger.warn("JWT 서명 검증 실패: {}", e.getMessage());
+            logger.debug("JWT 서명 검증 실패: {}", e.getMessage());
         } catch (MalformedJwtException e) {
-            logger.warn("잘못된 JWT 토큰: {}", e.getMessage());
+            logger.debug("잘못된 JWT 토큰: {}", e.getMessage());
         } catch (ExpiredJwtException e) {
-            logger.warn("만료된 JWT 토큰: {}", e.getMessage());
+            logger.debug("만료된 JWT 토큰: {}", e.getMessage());
         } catch (UnsupportedJwtException e) {
-            logger.warn("지원되지 않는 JWT 토큰: {}", e.getMessage());
+            logger.debug("지원되지 않는 JWT 토큰: {}", e.getMessage());
         } catch (IllegalArgumentException e) {
-            logger.warn("잘못된 JWT 토큰 인자: {}", e.getMessage());
+            logger.debug("잘못된 JWT 토큰 인자: {}", e.getMessage());
+        } catch (Exception e) {
+            logger.warn("JWT 토큰 검증 중 예상치 못한 오류: {}", e.getMessage());
         }
         return false;
     }
 
-    // Authorization 헤더에서 토큰 추출
     public String resolveToken(String bearerToken) {
         if (bearerToken != null && bearerToken.startsWith("Bearer ") && bearerToken.length() > 7) {
-            return bearerToken.substring(7);
+            return bearerToken.substring(7).trim();
         }
         return null;
+    }
+    
+    public Date getExpirationDate(String token) {
+        try {
+            return Jwts.parser()
+                .verifyWith(secretKey)
+                .build()
+                .parseSignedClaims(token)
+                .getPayload()
+                .getExpiration();
+        } catch (JwtException | IllegalArgumentException e) {
+            logger.warn("JWT 토큰에서 만료일 추출 실패: {}", e.getMessage());
+            return null;
+        }
     }
 }

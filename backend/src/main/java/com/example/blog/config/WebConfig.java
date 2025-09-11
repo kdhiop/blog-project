@@ -2,7 +2,10 @@ package com.example.blog.config;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.CacheControl;
 import org.springframework.web.servlet.config.annotation.*;
+
+import java.time.Duration;
 
 @Configuration
 public class WebConfig implements WebMvcConfigurer {
@@ -12,9 +15,8 @@ public class WebConfig implements WebMvcConfigurer {
 
     @Override
     public void addCorsMappings(CorsRegistry registry) {
-        // 실제 API 경로에 맞게 수정
-        registry.addMapping("/**") // 모든 경로 허용
-            .allowedOriginPatterns(frontendUrl, "http://localhost:*")
+        registry.addMapping("/**")
+            .allowedOriginPatterns(frontendUrl, "http://localhost:*", "https://localhost:*")
             .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH")
             .allowedHeaders("*")
             .allowCredentials(true)
@@ -23,21 +25,29 @@ public class WebConfig implements WebMvcConfigurer {
 
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
-        // 정적 리소스 핸들링 최적화
+        // 정적 리소스 핸들링 - Spring Boot 3.x 방식
         registry.addResourceHandler("/static/**")
             .addResourceLocations("classpath:/static/")
-            .setCachePeriod(3600)
+            .setCacheControl(CacheControl.maxAge(Duration.ofHours(1)))
             .resourceChain(true);
             
-        // 이미지 업로드용 디렉토리 (향후 확장 시)
+        // 업로드 파일용 디렉토리
         registry.addResourceHandler("/uploads/**")
             .addResourceLocations("file:uploads/")
-            .setCachePeriod(86400);
+            .setCacheControl(CacheControl.maxAge(Duration.ofDays(1)));
     }
 
     @Override
     public void configurePathMatch(PathMatchConfigurer configurer) {
-        // trailing slash 매칭 비활성화
-        configurer.setUseTrailingSlashMatch(false);
+        // Spring Boot 3.x에서 setUseTrailingSlashMatch는 deprecated
+        // 대신 setUseSuffixPatternMatch 사용
+        configurer.setUseSuffixPatternMatch(false);
+    }
+
+    @Override
+    public void addViewControllers(ViewControllerRegistry registry) {
+        // SPA 라우팅 지원 (React Router)
+        registry.addViewController("/").setViewName("forward:/index.html");
+        registry.addViewController("/{spring:\\w+}").setViewName("forward:/index.html");
     }
 }

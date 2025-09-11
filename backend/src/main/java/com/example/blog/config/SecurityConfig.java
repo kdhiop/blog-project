@@ -29,19 +29,29 @@ public class SecurityConfig {
             .sessionManagement(session -> 
                 session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
+                // 인증 불필요 경로
                 .requestMatchers("/auth/login", "/auth/register").permitAll()
                 .requestMatchers("/h2-console/**").permitAll()
-                .requestMatchers("/error").permitAll()
+                .requestMatchers("/error", "/favicon.ico").permitAll()
                 .requestMatchers("/actuator/health").permitAll()
-                .requestMatchers(HttpMethod.GET, "/posts", "/posts/**").permitAll()
+                
+                // 읽기 전용 공개 경로
+                .requestMatchers(HttpMethod.GET, "/posts").permitAll()
+                .requestMatchers(HttpMethod.GET, "/posts/*").permitAll()
                 .requestMatchers(HttpMethod.GET, "/posts/*/comments").permitAll()
+                
+                // 정적 리소스
+                .requestMatchers("/static/**", "/public/**", "/uploads/**").permitAll()
+                
+                // 나머지는 인증 필요
                 .anyRequest().authenticated())
             .headers(headers -> headers
                 .frameOptions(frameOptions -> frameOptions.sameOrigin())
                 .contentTypeOptions(contentTypeOptions -> contentTypeOptions.and())
                 .httpStrictTransportSecurity(hstsConfig -> hstsConfig
                     .maxAgeInSeconds(31536000)
-                    .includeSubDomains(true))
+                    .includeSubDomains(true)
+                    .and())
                 .referrerPolicy(ReferrerPolicyHeaderWriter.ReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN))
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 

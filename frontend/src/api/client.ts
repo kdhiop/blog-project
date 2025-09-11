@@ -1,8 +1,7 @@
-import axios from "axios";
+import axios, { AxiosError, type InternalAxiosRequestConfig } from "axios";
 
 const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
 
-// Axios 인스턴스 생성
 const client = axios.create({
     baseURL: BASE_URL,
     timeout: 10000,
@@ -11,12 +10,12 @@ const client = axios.create({
     },
 });
 
-// 요청 인터셉터 - 모든 요청에 토큰 자동 첨부
+// 요청 인터셉터 - 타입 안전성 개선
 client.interceptors.request.use(
-    (config) => {
+    (config: InternalAxiosRequestConfig) => {
         try {
             const token = localStorage.getItem("auth:token");
-            if (token) {
+            if (token && config.headers) {
                 config.headers.Authorization = `Bearer ${token}`;
             }
         } catch (error) {
@@ -27,19 +26,22 @@ client.interceptors.request.use(
         if (import.meta.env.DEV) {
             console.log(`🚀 API 요청: ${config.method?.toUpperCase()} ${config.url}`, {
                 data: config.data,
-                params: config.params
+                params: config.params,
+                headers: config.headers.Authorization ? 
+                    { ...config.headers, Authorization: "[HIDDEN]" } : 
+                    config.headers
             });
         }
         
         return config;
     },
-    (error) => {
+    (error: AxiosError) => {
         console.error("API 요청 설정 오류:", error);
         return Promise.reject(error);
     }
 );
 
-// 응답 인터셉터 - 401 에러 시 자동 로그아웃 및 에러 처리 개선
+// 응답 인터셉터 - 에러 처리 개선
 client.interceptors.response.use(
     (response) => {
         // 응답 로깅 (개발 환경에서만)
@@ -52,7 +54,7 @@ client.interceptors.response.use(
         
         return response;
     },
-    (error) => {
+    (error: AxiosError) => {
         // 에러 로깅
         if (import.meta.env.DEV) {
             console.error(`❌ API 에러: ${error.config?.method?.toUpperCase()} ${error.config?.url}`, {
@@ -73,9 +75,11 @@ client.interceptors.response.use(
 
             // 현재 경로가 인증 관련 페이지가 아닌 경우에만 리다이렉트
             const currentPath = window.location.pathname;
-            if (currentPath !== "/login" && currentPath !== "/signup" && !currentPath.startsWith("/auth")) {
+            const authPaths = ["/login", "/signup"];
+            const isAuthPath = authPaths.some(path => currentPath.startsWith(path));
+            
+            if (!isAuthPath) {
                 const returnUrl = encodeURIComponent(currentPath + window.location.search);
-                // replace 사용으로 뒤로가기 무한루프 방지
                 window.location.replace(`/login?from=${returnUrl}`);
             }
         }
@@ -83,9 +87,11 @@ client.interceptors.response.use(
         // 네트워크 에러 처리
         if (!error.response) {
             if (error.code === 'ECONNABORTED') {
-                console.error('요청 타임아웃');
+                console.error('요청 타임아웃 - 서버 응답이 느립니다');
             } else if (error.message === 'Network Error') {
-                console.error('네트워크 연결 오류');
+                console.error('네트워크 연결 오류 - 인터넷 연결을 확인해주세요');
+            } else {
+                console.error('네트워크 오류:', error.message);
             }
         }
 

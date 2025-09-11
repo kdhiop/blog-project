@@ -6,7 +6,7 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
 import java.util.Collection;
-import java.util.Collections;
+import java.util.List;
 
 public class CustomUserDetails implements UserDetails {
 
@@ -18,7 +18,9 @@ public class CustomUserDetails implements UserDetails {
 
 	@Override
 	public Collection<? extends GrantedAuthority> getAuthorities() {
-		return Collections.singletonList(new SimpleGrantedAuthority("ROLE_USER"));
+		// User 엔티티의 role을 기반으로 권한 설정
+		String roleName = "ROLE_" + (user.getRole() != null ? user.getRole().name() : "USER");
+		return List.of(new SimpleGrantedAuthority(roleName));
 	}
 
 	@Override
@@ -48,16 +50,27 @@ public class CustomUserDetails implements UserDetails {
 
 	@Override
 	public boolean isEnabled() {
-		return true;
+		return user.getEnabled() != null ? user.getEnabled() : true;
 	}
 
-	// 사용자 ID 가져오기 (편의 메소드)
+	// 편의 메소드들
 	public Long getId() {
 		return user.getId();
 	}
 
-	// 원본 User 엔티티 가져오기
 	public User getUser() {
 		return user;
+	}
+
+	public User.Role getRole() {
+		return user.getRole();
+	}
+
+	public boolean hasRole(User.Role role) {
+		return user.getRole() == role;
+	}
+
+	public boolean isAdmin() {
+		return hasRole(User.Role.ADMIN);
 	}
 }
