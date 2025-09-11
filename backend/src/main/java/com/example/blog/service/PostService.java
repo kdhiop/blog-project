@@ -13,7 +13,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 
 @Service
-@Transactional(readOnly = true)
 public class PostService {
     
     private static final Logger logger = LoggerFactory.getLogger(PostService.class);
@@ -26,10 +25,9 @@ public class PostService {
         this.userRepository = userRepository;
     }
 
-    @Transactional(readOnly = true)  // 명시적 트랜잭션 설정
+    @Transactional(readOnly = true)  // 읽기 전용은 그대로 유지
     public List<Post> listAll() { 
         try {
-            // JOIN FETCH로 Author 정보도 함께 가져와서 Lazy Loading 문제 해결
             List<Post> posts = postRepository.findAllWithAuthor();
             logger.debug("게시글 목록 조회 완료: {} 개", posts.size());
             return posts;
@@ -60,9 +58,8 @@ public class PostService {
         }
     }
 
-    @Transactional
+    @Transactional  // ⭐ readOnly 제거! 쓰기 작업이므로
     public Post create(Long userId, String title, String content) {
-        // 입력값 검증
         validateCreateInput(userId, title, content);
         
         try {
@@ -90,13 +87,13 @@ public class PostService {
         }
     }
 
-    @Transactional
+    @Transactional  // ⭐ readOnly 제거! 수정 작업이므로
     public Post update(Long id, Long userId, String title, String content) {
-        // 입력값 검증
         validateUpdateInput(id, userId, title, content);
         
         try {
-            Post post = postRepository.findById(id)
+            // ⭐ JOIN FETCH를 사용하여 Author 정보도 함께 로딩
+            Post post = postRepository.findByIdWithAuthor(id)
                 .orElseThrow(() -> {
                     logger.warn("존재하지 않는 게시글 수정 시도: postId={}", id);
                     return new RuntimeException("게시글을 찾을 수 없습니다");
@@ -111,16 +108,15 @@ public class PostService {
             Post updatedPost = postRepository.save(post);
             logger.info("게시글 수정 완료: postId={}, userId={}, title='{}'", id, userId, title);
             
-            return updatedPost;
+            // ⭐ 업데이트된 포스트를 다시 JOIN FETCH로 조회하여 완전한 객체 반환
+            return postRepository.findByIdWithAuthor(updatedPost.getId())
+                .orElse(updatedPost);
             
         } catch (SecurityException e) {
-            // SecurityException을 먼저 처리
             throw e;
         } catch (IllegalArgumentException e) {
-            // IllegalArgumentException 처리
             throw e;
         } catch (RuntimeException e) {
-            // 다른 RuntimeException들 처리
             throw e;
         } catch (Exception e) {
             logger.error("게시글 수정 중 오류: postId={}, userId={}", id, userId, e);
@@ -128,13 +124,13 @@ public class PostService {
         }
     }
 
-    @Transactional
+    @Transactional  // ⭐ readOnly 제거! 삭제 작업이므로
     public void delete(Long id, Long userId) {
-        // 입력값 검증
         validateDeleteInput(id, userId);
         
         try {
-            Post post = postRepository.findById(id)
+            // ⭐ JOIN FETCH를 사용하여 Author 정보도 함께 로딩
+            Post post = postRepository.findByIdWithAuthor(id)
                 .orElseThrow(() -> {
                     logger.warn("존재하지 않는 게시글 삭제 시도: postId={}", id);
                     return new RuntimeException("게시글을 찾을 수 없습니다");
@@ -147,13 +143,10 @@ public class PostService {
             logger.info("게시글 삭제 완료: postId={}, userId={}", id, userId);
             
         } catch (SecurityException e) {
-            // SecurityException을 먼저 처리
             throw e;
         } catch (IllegalArgumentException e) {
-            // IllegalArgumentException 처리
             throw e;
         } catch (RuntimeException e) {
-            // 다른 RuntimeException들 처리
             throw e;
         } catch (Exception e) {
             logger.error("게시글 삭제 중 오류: postId={}, userId={}", id, userId, e);
@@ -161,7 +154,7 @@ public class PostService {
         }
     }
 
-    // 입력값 검증 메소드들
+    // 입력값 검증 메소드들 (변경사항 없음)
     private void validateCreateInput(Long userId, String title, String content) {
         if (userId == null) {
             logger.warn("null 사용자 ID로 게시글 작성 시도");
