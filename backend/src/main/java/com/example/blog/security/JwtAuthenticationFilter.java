@@ -50,7 +50,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                         try {
                             UserDetails userDetails = userDetailsService.loadUserByUsername(username);
 
-                            if (userDetails != null) {
+                            if (userDetails != null && userDetails.isEnabled()) {
                                 UsernamePasswordAuthenticationToken authentication = 
                                     new UsernamePasswordAuthenticationToken(
                                         userDetails, null, userDetails.getAuthorities());
@@ -68,11 +68,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     logger.warn("유효하지 않은 JWT 토큰: {}", requestPath);
                     SecurityContextHolder.clearContext();
                 }
-            } else if (authHeader != null) {
+            } else if (authHeader != null && !authHeader.isEmpty()) {
                 logger.debug("Authorization 헤더가 있지만 Bearer 토큰이 아님: {}", requestPath);
             }
         } catch (Exception e) {
-            logger.error("JWT 토큰 처리 중 예외 발생: {}", e.getMessage(), e);
+            logger.error("JWT 토큰 처리 중 예외 발생: {} - {}", requestPath, e.getMessage());
             SecurityContextHolder.clearContext();
             
             // 토큰 관련 오류가 발생해도 필터 체인은 계속 진행
@@ -91,12 +91,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         boolean shouldSkip = path.equals("/auth/login") || 
                path.equals("/auth/register") || 
                path.startsWith("/h2-console") ||
+               path.equals("/error") ||
                (path.equals("/posts") && "GET".equals(method)) ||
                (path.matches("/posts/\\d+") && "GET".equals(method)) ||
                (path.matches("/posts/\\d+/comments") && "GET".equals(method)) ||
-               path.startsWith("/actuator") || // Spring Boot Actuator (필요시)
+               path.startsWith("/actuator") || // Spring Boot Actuator
                path.equals("/favicon.ico") ||
-               path.startsWith("/static/");
+               path.startsWith("/static/") ||
+               path.startsWith("/public/");
         
         if (shouldSkip) {
             logger.debug("JWT 필터 건너뜀: {} {}", method, path);

@@ -14,9 +14,13 @@ const client = axios.create({
 // 요청 인터셉터 - 모든 요청에 토큰 자동 첨부
 client.interceptors.request.use(
     (config) => {
-        const token = localStorage.getItem("auth:token");
-        if (token) {
-            config.headers.Authorization = `Bearer ${token}`;
+        try {
+            const token = localStorage.getItem("auth:token");
+            if (token) {
+                config.headers.Authorization = `Bearer ${token}`;
+            }
+        } catch (error) {
+            console.warn("토큰 조회 실패 (localStorage 접근 불가):", error);
         }
         
         // 요청 로깅 (개발 환경에서만)
@@ -60,14 +64,28 @@ client.interceptors.response.use(
 
         // 401 에러 처리 (인증 만료)
         if (error.response?.status === 401) {
-            localStorage.removeItem("auth:token");
-            localStorage.removeItem("auth:user");
+            try {
+                localStorage.removeItem("auth:token");
+                localStorage.removeItem("auth:user");
+            } catch (storageError) {
+                console.warn("localStorage 정리 실패:", storageError);
+            }
 
+            // 현재 경로가 인증 관련 페이지가 아닌 경우에만 리다이렉트
             const currentPath = window.location.pathname;
-            if (currentPath !== "/login" && currentPath !== "/signup") {
-                const returnUrl = encodeURIComponent(currentPath);
+            if (currentPath !== "/login" && currentPath !== "/signup" && !currentPath.startsWith("/auth")) {
+                const returnUrl = encodeURIComponent(currentPath + window.location.search);
                 // replace 사용으로 뒤로가기 무한루프 방지
                 window.location.replace(`/login?from=${returnUrl}`);
+            }
+        }
+
+        // 네트워크 에러 처리
+        if (!error.response) {
+            if (error.code === 'ECONNABORTED') {
+                console.error('요청 타임아웃');
+            } else if (error.message === 'Network Error') {
+                console.error('네트워크 연결 오류');
             }
         }
 

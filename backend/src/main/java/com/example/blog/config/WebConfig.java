@@ -12,19 +12,13 @@ public class WebConfig implements WebMvcConfigurer {
 
     @Override
     public void addCorsMappings(CorsRegistry registry) {
-        registry.addMapping("/api/**")
-            .allowedOriginPatterns(frontendUrl, "http://localhost:*") // 패턴 기반 허용
+        // 실제 API 경로에 맞게 수정
+        registry.addMapping("/**") // 모든 경로 허용
+            .allowedOriginPatterns(frontendUrl, "http://localhost:*")
             .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH")
             .allowedHeaders("*")
             .allowCredentials(true)
-            .maxAge(3600); // CORS preflight 캐시 시간
-        
-        // 모든 경로에 대해서도 CORS 허용 (필요시)
-        registry.addMapping("/**")
-            .allowedOriginPatterns(frontendUrl)
-            .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
-            .allowedHeaders("*")
-            .allowCredentials(true);
+            .maxAge(3600);
     }
 
     @Override

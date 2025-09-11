@@ -43,14 +43,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   // 토큰 유효성 검증
   const checkAuth = useCallback(async () => {
-    const token = localStorage.getItem("auth:token");
-    
-    if (!token) {
-      setIsLoading(false);
-      return;
-    }
-
     try {
+      const token = localStorage.getItem("auth:token");
+      
+      if (!token) {
+        setIsLoading(false);
+        return;
+      }
+
       // 서버에서 현재 사용자 정보 검증
       const currentUser = await getCurrentUser();
       setUser(currentUser);
