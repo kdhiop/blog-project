@@ -4,6 +4,7 @@ import { getPost, deletePost, updatePost } from "../api/posts";
 import { addComment, getComments, deleteComment, updateComment } from "../api/comments";
 import { useAuth } from "../context/AuthContext";
 import { useState } from "react";
+import { useConfirmModal } from "../components/ConfirmModal";
 
 export default function PostDetail() {
   const { id } = useParams();
@@ -11,6 +12,7 @@ export default function PostDetail() {
   const { user } = useAuth();
   const qc = useQueryClient();
   const navigate = useNavigate();
+  const { showConfirm, ConfirmModalComponent } = useConfirmModal();
 
   const { data: post, isLoading: postLoading } = useQuery({
     queryKey: ["post", postId],
@@ -121,7 +123,7 @@ export default function PostDetail() {
     },
   });
 
-  const handleDeletePost = () => {
+  const handleDeletePost = async () => {
     if (!user) {
       alert("로그인이 필요합니다.");
       return;
@@ -130,7 +132,16 @@ export default function PostDetail() {
       alert("작성자만 삭제할 수 있습니다.");
       return;
     }
-    if (window.confirm("정말로 이 게시글을 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.")) {
+    
+    const confirmed = await showConfirm({
+      title: "게시글 삭제",
+      message: "정말로 이 게시글을 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.",
+      confirmText: "삭제",
+      cancelText: "취소",
+      type: "danger"
+    });
+
+    if (confirmed) {
       deletePostMut.mutate();
     }
   };
@@ -437,6 +448,7 @@ export default function PostDetail() {
           )}
         </section>
       </div>
+      <ConfirmModalComponent />
     </div>
   );
 }

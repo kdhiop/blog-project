@@ -1888,6 +1888,196 @@ a:hover {
 }
 
 /* =====================================
+   CONFIRM MODAL
+   ===================================== */
+
+/* Modal Overlay */
+.confirm-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(4px);
+  padding: 1rem;
+}
+
+.confirm-modal-overlay--active {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* Modal Container */
+.confirm-modal {
+  background: white;
+  border-radius: var(--radius-xl);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+  max-width: 480px;
+  width: 100%;
+  max-height: 90vh;
+  overflow: hidden;
+  transform: scale(0.95) translateY(20px);
+  transition: all 0.3s ease;
+  border: 1px solid var(--border-color);
+}
+
+.confirm-modal--active {
+  transform: scale(1) translateY(0);
+}
+
+/* Modal Header */
+.confirm-modal-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 2rem 2rem 1rem;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.confirm-modal-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: rgba(239, 68, 68, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  flex-shrink: 0;
+}
+
+.confirm-modal-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin: 0;
+  color: var(--text-primary);
+}
+
+/* Modal Body */
+.confirm-modal-body {
+  padding: 1.5rem 2rem;
+}
+
+.confirm-modal-message {
+  font-size: 1rem;
+  line-height: 1.6;
+  color: var(--text-secondary);
+  margin: 0;
+  white-space: pre-line;
+}
+
+/* Modal Footer */
+.confirm-modal-footer {
+  display: flex;
+  gap: 1rem;
+  padding: 1.5rem 2rem 2rem;
+  justify-content: flex-end;
+}
+
+/* Modal Buttons */
+.confirm-modal-btn {
+  padding: 0.75rem 1.5rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  border-radius: 2rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  border: none;
+  min-width: 100px;
+  justify-content: center;
+}
+
+.confirm-modal-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.confirm-modal-btn--cancel {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  border: 2px solid var(--border-color);
+}
+
+.confirm-modal-btn--cancel:hover:not(:disabled) {
+  background: var(--border-color);
+  transform: translateY(-1px);
+}
+
+.confirm-modal-btn--confirm {
+  color: white;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+.confirm-modal-btn--confirm:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+}
+
+/* Button Types */
+.confirm-modal-btn--danger {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+}
+
+.confirm-modal-btn--warning {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+}
+
+.confirm-modal-btn--info {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+  .confirm-modal {
+    margin: 1rem;
+    max-width: calc(100% - 2rem);
+  }
+
+  .confirm-modal-header,
+  .confirm-modal-body,
+  .confirm-modal-footer {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+
+  .confirm-modal-header {
+    padding-top: 1.5rem;
+  }
+
+  .confirm-modal-footer {
+    flex-direction: column-reverse;
+    gap: 0.75rem;
+  }
+
+  .confirm-modal-btn {
+    width: 100%;
+  }
+
+  .confirm-modal-icon {
+    width: 40px;
+    height: 40px;
+    font-size: 1.25rem;
+  }
+
+  .confirm-modal-title {
+    font-size: 1.1rem;
+  }
+}
+
+/* =====================================
    UTILITY CLASSES
    ===================================== */
 
@@ -2364,13 +2554,13 @@ a:hover {
 
 /* Search Bar Container */
 .search-bar-container {
-  margin-bottom: 3.5rem;
+  margin-bottom: 4.5rem;
   position: relative;
 }
 
 .home-search-bar {
   max-width: 600px;
-  margin: 0 auto 1.5rem auto;
+  margin: 0 auto 2rem auto;
 }
 
 .search-form {
@@ -2578,7 +2768,7 @@ a:hover {
 
 /* Search Results */
 .search-results-info {
-  margin-bottom: 3rem;
+  margin-bottom: 3.5rem;
   text-align: center;
   padding: 1.5rem;
   background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
