@@ -3,7 +3,7 @@ import Home from "./pages/Home";
 import NewPost from "./pages/NewPost";
 import PostDetail from "./pages/PostDetail";
 import Login from "./pages/Login";
-import Signup from "./pages/Signup";
+import { Signup } from "./pages/Signup";
 import RequireAuth from "./components/RequireAuth";
 import Navbar from "./components/Navbar";
 import { ErrorBoundary } from "./components/ErrorBoundary";
