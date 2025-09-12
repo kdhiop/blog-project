@@ -7,10 +7,15 @@ import com.example.blog.repository.UserRepository;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class PostService {
@@ -25,7 +30,7 @@ public class PostService {
         this.userRepository = userRepository;
     }
 
-    @Transactional(readOnly = true)  // 읽기 전용은 그대로 유지
+    @Transactional(readOnly = true)
     public List<Post> listAll() { 
         try {
             List<Post> posts = postRepository.findAllWithAuthor();
@@ -35,6 +40,157 @@ public class PostService {
             logger.error("게시글 목록 조회 중 오류: {}", e.getMessage(), e);
             throw new RuntimeException("게시글 목록을 불러오는 중 오류가 발생했습니다", e);
         }
+    }
+
+    // *** 검색 기능 추가 ***
+    
+    @Transactional(readOnly = true)
+    public List<Post> search(String keyword) {
+        if (keyword == null || keyword.trim().isEmpty()) {
+            logger.warn("빈 검색어로 검색 시도");
+            throw new IllegalArgumentException("검색어는 필수입니다");
+        }
+        
+        String trimmedKeyword = keyword.trim();
+        
+        // 검색어가 너무 짧은 경우 제한
+        if (trimmedKeyword.length() < 2) {
+            logger.warn("너무 짧은 검색어: '{}'", trimmedKeyword);
+            throw new IllegalArgumentException("검색어는 2자 이상이어야 합니다");
+        }
+        
+        try {
+            List<Post> results;
+            
+            // 다중 키워드 검색 처리 (공백으로 구분)
+            String[] keywords = trimmedKeyword.split("\\s+");
+            
+            if (keywords.length > 1) {
+                // 여러 키워드가 있는 경우
+                results = searchMultipleKeywords(keywords);
+                logger.debug("다중 키워드 검색 완료: '{}' -> {} 개 결과", trimmedKeyword, results.size());
+            } else {
+                // 단일 키워드 검색
+                results = postRepository.findByFullTextSearchWithAuthor(trimmedKeyword);
+                logger.debug("단일 키워드 검색 완료: '{}' -> {} 개 결과", trimmedKeyword, results.size());
+            }
+            
+            return results;
+            
+        } catch (IllegalArgumentException e) {
+            throw e;
+        } catch (Exception e) {
+            logger.error("검색 중 오류 발생: keyword='{}'", trimmedKeyword, e);
+            throw new RuntimeException("검색 중 오류가 발생했습니다", e);
+        }
+    }
+    
+    @Transactional(readOnly = true)
+    public List<Post> searchByTitle(String keyword) {
+        if (keyword == null || keyword.trim().isEmpty()) {
+            throw new IllegalArgumentException("검색어는 필수입니다");
+        }
+        
+        try {
+            List<Post> results = postRepository.findByTitleContainingIgnoreCaseWithAuthor(keyword.trim());
+            logger.debug("제목 검색 완료: '{}' -> {} 개 결과", keyword, results.size());
+            return results;
+        } catch (Exception e) {
+            logger.error("제목 검색 중 오류: keyword='{}'", keyword, e);
+            throw new RuntimeException("제목 검색 중 오류가 발생했습니다", e);
+        }
+    }
+    
+    @Transactional(readOnly = true)
+    public List<Post> searchByContent(String keyword) {
+        if (keyword == null || keyword.trim().isEmpty()) {
+            throw new IllegalArgumentException("검색어는 필수입니다");
+        }
+        
+        try {
+            List<Post> results = postRepository.findByContentContainingIgnoreCaseWithAuthor(keyword.trim());
+            logger.debug("내용 검색 완료: '{}' -> {} 개 결과", keyword, results.size());
+            return results;
+        } catch (Exception e) {
+            logger.error("내용 검색 중 오류: keyword='{}'", keyword, e);
+            throw new RuntimeException("내용 검색 중 오류가 발생했습니다", e);
+        }
+    }
+    
+    @Transactional(readOnly = true)
+    public List<Post> searchByAuthor(String keyword) {
+        if (keyword == null || keyword.trim().isEmpty()) {
+            throw new IllegalArgumentException("검색어는 필수입니다");
+        }
+        
+        try {
+            List<Post> results = postRepository.findByAuthorUsernameContainingIgnoreCaseWithAuthor(keyword.trim());
+            logger.debug("작성자 검색 완료: '{}' -> {} 개 결과", keyword, results.size());
+            return results;
+        } catch (Exception e) {
+            logger.error("작성자 검색 중 오류: keyword='{}'", keyword, e);
+            throw new RuntimeException("작성자 검색 중 오류가 발생했습니다", e);
+        }
+    }
+    
+    @Transactional(readOnly = true)
+    public List<Post> searchRecent(String keyword, int limit) {
+        if (keyword == null || keyword.trim().isEmpty()) {
+            throw new IllegalArgumentException("검색어는 필수입니다");
+        }
+        
+        try {
+            Pageable pageable = PageRequest.of(0, Math.max(1, Math.min(limit, 50))); // 최대 50개로 제한
+            List<Post> results = postRepository.findTopByKeywordWithAuthor(keyword.trim(), pageable);
+            logger.debug("최근 검색 완료: '{}' -> {} 개 결과 (limit={})", keyword, results.size(), limit);
+            return results;
+        } catch (Exception e) {
+            logger.error("최근 검색 중 오류: keyword='{}', limit={}", keyword, limit, e);
+            throw new RuntimeException("최근 검색 중 오류가 발생했습니다", e);
+        }
+    }
+    
+    @Transactional(readOnly = true)
+    public List<Post> searchSince(String keyword, LocalDateTime since) {
+        if (keyword == null || keyword.trim().isEmpty()) {
+            throw new IllegalArgumentException("검색어는 필수입니다");
+        }
+        if (since == null) {
+            throw new IllegalArgumentException("기준 날짜는 필수입니다");
+        }
+        
+        try {
+            List<Post> results = postRepository.findByKeywordAndDateAfterWithAuthor(keyword.trim(), since);
+            logger.debug("날짜 제한 검색 완료: '{}' since {} -> {} 개 결과", keyword, since, results.size());
+            return results;
+        } catch (Exception e) {
+            logger.error("날짜 제한 검색 중 오류: keyword='{}', since={}", keyword, since, e);
+            throw new RuntimeException("날짜 제한 검색 중 오류가 발생했습니다", e);
+        }
+    }
+    
+    // 다중 키워드 검색 처리 (private 메소드)
+    private List<Post> searchMultipleKeywords(String[] keywords) {
+        if (keywords.length == 0) {
+            return List.of();
+        }
+        
+        // 첫 번째 키워드로 검색
+        List<Post> results = postRepository.findByFullTextSearchWithAuthor(keywords[0]);
+        
+        // 나머지 키워드들로 필터링 (메모리에서 처리)
+        for (int i = 1; i < keywords.length; i++) {
+            final String keyword = keywords[i].toLowerCase();
+            results = results.stream()
+                .filter(post -> 
+                    post.getTitle().toLowerCase().contains(keyword) ||
+                    post.getContent().toLowerCase().contains(keyword) ||
+                    (post.getAuthor() != null && post.getAuthor().getUsername().toLowerCase().contains(keyword))
+                )
+                .collect(Collectors.toList());
+        }
+        
+        return results;
     }
 
     @Transactional(readOnly = true)
@@ -58,7 +214,7 @@ public class PostService {
         }
     }
 
-    @Transactional  // ⭐ readOnly 제거! 쓰기 작업이므로
+    @Transactional
     public Post create(Long userId, String title, String content) {
         validateCreateInput(userId, title, content);
         
@@ -87,19 +243,17 @@ public class PostService {
         }
     }
 
-    @Transactional  // ⭐ readOnly 제거! 수정 작업이므로
+    @Transactional
     public Post update(Long id, Long userId, String title, String content) {
         validateUpdateInput(id, userId, title, content);
         
         try {
-            // ⭐ JOIN FETCH를 사용하여 Author 정보도 함께 로딩
             Post post = postRepository.findByIdWithAuthor(id)
                 .orElseThrow(() -> {
                     logger.warn("존재하지 않는 게시글 수정 시도: postId={}", id);
                     return new RuntimeException("게시글을 찾을 수 없습니다");
                 });
             
-            // 작성자 권한 확인
             validateAuthorPermission(post, userId, "수정");
             
             post.setTitle(title.trim());
@@ -108,7 +262,6 @@ public class PostService {
             Post updatedPost = postRepository.save(post);
             logger.info("게시글 수정 완료: postId={}, userId={}, title='{}'", id, userId, title);
             
-            // ⭐ 업데이트된 포스트를 다시 JOIN FETCH로 조회하여 완전한 객체 반환
             return postRepository.findByIdWithAuthor(updatedPost.getId())
                 .orElse(updatedPost);
             
@@ -124,19 +277,17 @@ public class PostService {
         }
     }
 
-    @Transactional  // ⭐ readOnly 제거! 삭제 작업이므로
+    @Transactional
     public void delete(Long id, Long userId) {
         validateDeleteInput(id, userId);
         
         try {
-            // ⭐ JOIN FETCH를 사용하여 Author 정보도 함께 로딩
             Post post = postRepository.findByIdWithAuthor(id)
                 .orElseThrow(() -> {
                     logger.warn("존재하지 않는 게시글 삭제 시도: postId={}", id);
                     return new RuntimeException("게시글을 찾을 수 없습니다");
                 });
             
-            // 작성자 권한 확인
             validateAuthorPermission(post, userId, "삭제");
             
             postRepository.deleteById(id);
@@ -154,7 +305,7 @@ public class PostService {
         }
     }
 
-    // 입력값 검증 메소드들 (변경사항 없음)
+    // 입력값 검증 메소드들
     private void validateCreateInput(Long userId, String title, String content) {
         if (userId == null) {
             logger.warn("null 사용자 ID로 게시글 작성 시도");

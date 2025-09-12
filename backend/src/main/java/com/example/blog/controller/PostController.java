@@ -28,9 +28,51 @@ public class PostController {
 	}
 
 	@GetMapping
-	public List<PostResponse> list() {
-		logger.debug("게시글 목록 조회 요청");
-		return postService.listAll().stream().map(this::toResp).collect(Collectors.toList());
+	public List<PostResponse> list(@RequestParam(value = "search", required = false) String searchQuery) {
+		if (searchQuery != null && !searchQuery.trim().isEmpty()) {
+			logger.debug("게시글 검색 요청: query='{}'", searchQuery);
+			return postService.search(searchQuery.trim()).stream()
+				.map(this::toResp)
+				.collect(Collectors.toList());
+		} else {
+			logger.debug("게시글 목록 조회 요청");
+			return postService.listAll().stream()
+				.map(this::toResp)
+				.collect(Collectors.toList());
+		}
+	}
+
+	// 별도의 검색 전용 엔드포인트 (옵션)
+	@GetMapping("/search")
+	public List<PostResponse> search(@RequestParam("q") String query) {
+		try {
+			logger.info("게시글 검색: query='{}'", query);
+			
+			if (query == null || query.trim().isEmpty()) {
+				logger.warn("빈 검색어로 검색 시도");
+				throw new IllegalArgumentException("검색어는 필수입니다");
+			}
+			
+			String trimmedQuery = query.trim();
+			if (trimmedQuery.length() < 2) {
+				logger.warn("너무 짧은 검색어: '{}'", trimmedQuery);
+				throw new IllegalArgumentException("검색어는 2자 이상이어야 합니다");
+			}
+			
+			List<Post> searchResults = postService.search(trimmedQuery);
+			logger.info("검색 완료: query='{}', results={}", trimmedQuery, searchResults.size());
+			
+			return searchResults.stream()
+				.map(this::toResp)
+				.collect(Collectors.toList());
+				
+		} catch (IllegalArgumentException e) {
+			logger.warn("검색 요청 오류: {}", e.getMessage());
+			throw e;
+		} catch (Exception e) {
+			logger.error("검색 중 오류 발생: query='{}'", query, e);
+			throw new RuntimeException("검색 중 오류가 발생했습니다");
+		}
 	}
 
 	@GetMapping("/{id}")

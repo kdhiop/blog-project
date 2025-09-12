@@ -1,11 +1,28 @@
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { useState } from "react";
 
 export default function Navbar() {
   const { user, logout, isLoading } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
+  const [navSearchQuery, setNavSearchQuery] = useState("");
 
   const isActive = (path: string) => location.pathname === path;
+
+  const handleNavSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (navSearchQuery.trim().length >= 2) {
+      const searchParams = new URLSearchParams();
+      searchParams.set('search', navSearchQuery.trim());
+      navigate(`/?${searchParams.toString()}`);
+      setNavSearchQuery("");
+    }
+  };
+
+  const handleNavSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setNavSearchQuery(e.target.value);
+  };
 
   return (
     <nav className="nav-bar">
@@ -32,6 +49,20 @@ export default function Navbar() {
             <span className="nav-brand-icon">✏️</span>
             <span>글쓰기</span>
           </Link>
+        </div>
+
+        {/* Navigation Search - Desktop Only */}
+        <div className="nav-search-container">
+          <form onSubmit={handleNavSearch} className="nav-search-form">
+            <input
+              type="text"
+              value={navSearchQuery}
+              onChange={handleNavSearchChange}
+              placeholder="검색..."
+              className="nav-search-input"
+              maxLength={50}
+            />
+          </form>
         </div>
 
         <div className="nav-auth">

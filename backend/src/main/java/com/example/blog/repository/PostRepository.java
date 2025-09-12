@@ -25,7 +25,80 @@ public interface PostRepository extends JpaRepository<Post, Long> {
     @Query("SELECT p FROM Post p ORDER BY p.id DESC")
     List<Post> findAllOrderByIdDesc();
     
-    // 제목 또는 내용으로 검색
+    // *** 검색 기능 추가 - 다양한 검색 옵션 ***
+    
+    // 제목 또는 내용으로 검색 (기본)
+    @Query("SELECT p FROM Post p LEFT JOIN FETCH p.author " +
+           "WHERE LOWER(p.title) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
+           "OR LOWER(p.content) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
+           "ORDER BY p.id DESC")
+    List<Post> findByKeywordWithAuthor(@Param("keyword") String keyword);
+    
+    // 제목으로만 검색
+    @Query("SELECT p FROM Post p LEFT JOIN FETCH p.author " +
+           "WHERE LOWER(p.title) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
+           "ORDER BY p.id DESC")
+    List<Post> findByTitleContainingIgnoreCaseWithAuthor(@Param("keyword") String keyword);
+    
+    // 내용으로만 검색
+    @Query("SELECT p FROM Post p LEFT JOIN FETCH p.author " +
+           "WHERE LOWER(p.content) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
+           "ORDER BY p.id DESC")
+    List<Post> findByContentContainingIgnoreCaseWithAuthor(@Param("keyword") String keyword);
+    
+    // 작성자명으로 검색
+    @Query("SELECT p FROM Post p LEFT JOIN FETCH p.author a " +
+           "WHERE LOWER(a.username) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
+           "ORDER BY p.id DESC")
+    List<Post> findByAuthorUsernameContainingIgnoreCaseWithAuthor(@Param("keyword") String keyword);
+    
+    // 전체 텍스트 검색 (제목, 내용, 작성자명 모두 포함)
+    @Query("SELECT p FROM Post p LEFT JOIN FETCH p.author a " +
+           "WHERE LOWER(p.title) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
+           "OR LOWER(p.content) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
+           "OR LOWER(a.username) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
+           "ORDER BY p.id DESC")
+    List<Post> findByFullTextSearchWithAuthor(@Param("keyword") String keyword);
+    
+    // 고급 검색 - 여러 키워드 지원 (공백으로 구분)
+    @Query("SELECT DISTINCT p FROM Post p LEFT JOIN FETCH p.author a " +
+           "WHERE (" +
+           "  LOWER(p.title) LIKE LOWER(CONCAT('%', :keyword1, '%')) " +
+           "  OR LOWER(p.content) LIKE LOWER(CONCAT('%', :keyword1, '%')) " +
+           "  OR LOWER(a.username) LIKE LOWER(CONCAT('%', :keyword1, '%'))" +
+           ") AND (" +
+           "  LOWER(p.title) LIKE LOWER(CONCAT('%', :keyword2, '%')) " +
+           "  OR LOWER(p.content) LIKE LOWER(CONCAT('%', :keyword2, '%')) " +
+           "  OR LOWER(a.username) LIKE LOWER(CONCAT('%', :keyword2, '%'))" +
+           ") ORDER BY p.id DESC")
+    List<Post> findByMultipleKeywordsWithAuthor(@Param("keyword1") String keyword1, @Param("keyword2") String keyword2);
+    
+    // 날짜 범위와 함께 검색
+    @Query("SELECT p FROM Post p LEFT JOIN FETCH p.author " +
+           "WHERE (LOWER(p.title) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
+           "OR LOWER(p.content) LIKE LOWER(CONCAT('%', :keyword, '%'))) " +
+           "AND p.createdAt >= :startDate " +
+           "ORDER BY p.id DESC")
+    List<Post> findByKeywordAndDateAfterWithAuthor(@Param("keyword") String keyword, 
+                                                   @Param("startDate") java.time.LocalDateTime startDate);
+    
+    // 검색 결과 개수 제한 (상위 N개)
+    @Query(value = "SELECT p FROM Post p LEFT JOIN FETCH p.author " +
+           "WHERE LOWER(p.title) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
+           "OR LOWER(p.content) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
+           "ORDER BY p.id DESC")
+    List<Post> findTopByKeywordWithAuthor(@Param("keyword") String keyword, Pageable pageable);
+    
+    // 페이징을 지원하는 검색
+    @Query("SELECT p FROM Post p " +
+           "WHERE LOWER(p.title) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
+           "OR LOWER(p.content) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
+           "ORDER BY p.id DESC")
+    Page<Post> findByKeywordPaged(@Param("keyword") String keyword, Pageable pageable);
+    
+    // *** 기존 메소드들 (하위 호환성 유지) ***
+    
+    // 제목 또는 내용으로 검색 (기존 메소드)
     @Query("SELECT p FROM Post p WHERE p.title LIKE %:keyword% OR p.content LIKE %:keyword% ORDER BY p.id DESC")
     List<Post> findByKeyword(@Param("keyword") String keyword);
     

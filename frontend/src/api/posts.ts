@@ -27,8 +27,20 @@ const mapBackendPost = (post: BackendPostResponse): Post => ({
   } : undefined
 });
 
-export const getPosts = async (): Promise<Post[]> => {
-  const res = await client.get<BackendPostResponse[]>("/posts");
+export const getPosts = async (searchQuery?: string): Promise<Post[]> => {
+  const params = searchQuery ? { search: searchQuery } : {};
+  const res = await client.get<BackendPostResponse[]>("/posts", { params });
+  return res.data.map(mapBackendPost);
+};
+
+export const searchPosts = async (query: string): Promise<Post[]> => {
+  if (!query || query.trim().length < 2) {
+    throw new Error("검색어는 2자 이상이어야 합니다");
+  }
+  
+  const res = await client.get<BackendPostResponse[]>("/posts/search", {
+    params: { q: query.trim() }
+  });
   return res.data.map(mapBackendPost);
 };
 
