@@ -3,6 +3,7 @@ import { useMutation } from "@tanstack/react-query";
 import { login } from "../api/auth";
 import { useAuth } from "../context/AuthContext";
 import { useLocation, useNavigate, Link } from "react-router-dom";
+import { useConfirmModal } from "../components/ConfirmModal";
 
 export default function Login() {
   const [username, setUsername] = useState("");
@@ -13,6 +14,7 @@ export default function Login() {
   const { login: setAuth } = useAuth();
   const nav = useNavigate();
   const loc = useLocation() as { state?: { from?: string } };
+  const { showConfirm, ConfirmModalComponent } = useConfirmModal();
 
   // 클라이언트 사이드 유효성 검증
   const validateInput = () => {
@@ -66,37 +68,54 @@ export default function Login() {
       
       nav(loc.state?.from ?? "/");
     },
-    onError: (error: any) => {
+    onError: async (error: any) => {
       console.error("로그인 실패:", error);
       
-      // 서버에서 온 상세한 에러 메시지 로깅
-      if (error.response?.data?.message) {
-        console.error("서버 에러 메시지:", error.response.data.message);
+      let errorMessage = "로그인 중 오류가 발생했습니다.";
+      
+      // 클라이언트 사이드 에러
+      if (error.message && !error.response) {
+        errorMessage = error.message;
       }
+      // 서버 에러
+      else if (error.response?.status === 401) {
+        errorMessage = "아이디 또는 비밀번호가 올바르지 않습니다.";
+      }
+      else if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      }
+      else if (error.response?.status === 429) {
+        errorMessage = "너무 많은 로그인 시도가 있었습니다. 잠시 후 다시 시도해주세요.";
+      }
+      else if (error.response?.status >= 500) {
+        errorMessage = "서버에 문제가 발생했습니다. 잠시 후 다시 시도해주세요.";
+      }
+
+      await showConfirm({
+        title: "로그인 실패",
+        message: errorMessage,
+        confirmText: "확인",
+        type: "danger"
+      });
     }
   });
 
-  // 에러 메시지 표시 함수
-  const getErrorMessage = () => {
-    if (!mut.error) return null;
-    
-    const error = mut.error as any;
-    
-    // 클라이언트 사이드 에러
-    if (error.message && !error.response) {
-      return error.message;
-    }
-    
-    // 서버 에러
-    if (error.response?.status === 401) {
-      return "아이디 또는 비밀번호가 올바르지 않습니다.";
-    }
-    
-    if (error.response?.data?.message) {
-      return error.response.data.message;
-    }
-    
-    return "로그인 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.";
+  const handleForgotPassword = async () => {
+    await showConfirm({
+      title: "비밀번호 찾기",
+      message: "비밀번호 찾기 기능은 준비 중입니다.\n\n관리자에게 문의하시거나 새로운 계정을 만들어 보세요.",
+      confirmText: "확인",
+      type: "info"
+    });
+  };
+
+  const handleSocialLogin = async (provider: string) => {
+    await showConfirm({
+      title: "소셜 로그인",
+      message: `${provider} 로그인은 준비 중입니다.\n\n곧 지원될 예정입니다.`,
+      confirmText: "확인",
+      type: "info"
+    });
   };
 
   return (
@@ -130,6 +149,7 @@ export default function Login() {
                 required
                 autoComplete="username"
                 disabled={mut.isPending}
+                maxLength={20}
               />
             </div>
 
@@ -155,6 +175,7 @@ export default function Login() {
                   onClick={() => setShowPassword(!showPassword)}
                   aria-label={showPassword ? "비밀번호 숨기기" : "비밀번호 보기"}
                   disabled={mut.isPending}
+                  tabIndex={-1}
                 >
                   {showPassword ? "👁️" : "👁️‍🗨️"}
                 </button>
@@ -172,17 +193,14 @@ export default function Login() {
                 />
                 <label htmlFor="remember">로그인 상태 유지</label>
               </div>
-              <a 
-                href="#" 
+              <button
+                type="button"
                 className="auth-forgot-password"
-                onClick={(e) => {
-                  e.preventDefault();
-                  // TODO: 비밀번호 찾기 기능 구현
-                  alert("비밀번호 찾기 기능은 준비 중입니다.");
-                }}
+                onClick={handleForgotPassword}
+                disabled={mut.isPending}
               >
                 비밀번호 찾기
-              </a>
+              </button>
             </div>
 
             <button
@@ -199,13 +217,6 @@ export default function Login() {
                 "로그인"
               )}
             </button>
-
-            {mut.isError && (
-              <div className="ui-error-message">
-                <span>⚠️</span>
-                {getErrorMessage()}
-              </div>
-            )}
           </form>
 
           <div className="auth-divider">
@@ -218,7 +229,7 @@ export default function Login() {
             <button 
               className="auth-social-btn" 
               type="button"
-              onClick={() => alert("Google 로그인은 준비 중입니다.")}
+              onClick={() => handleSocialLogin("Google")}
               disabled={mut.isPending}
             >
               <span className="social-icon">🔵</span>
@@ -227,7 +238,7 @@ export default function Login() {
             <button 
               className="auth-social-btn" 
               type="button"
-              onClick={() => alert("GitHub 로그인은 준비 중입니다.")}
+              onClick={() => handleSocialLogin("GitHub")}
               disabled={mut.isPending}
             >
               <span className="social-icon">⚫</span>
@@ -243,6 +254,9 @@ export default function Login() {
           </p>
         </div>
       </div>
+      
+      {/* 커스텀 모달 컴포넌트 */}
+      <ConfirmModalComponent />
     </div>
   );
 }

@@ -2971,3 +2971,422 @@ mark {
     justify-content: space-between;
   }
 }
+
+/* =====================================
+   ADDITIONAL STYLES FOR MODAL INTEGRATION
+   ===================================== */
+
+/* 미리보기 모드 개선 */
+.new-post-preview-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid var(--border-color);
+}
+
+.new-post-preview-header h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.new-post-preview-container {
+  background: var(--bg-secondary);
+  border-radius: var(--radius-lg);
+  padding: 2rem;
+  border: 1px solid var(--border-color);
+}
+
+.new-post-preview-meta {
+  margin-bottom: 2rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.post-preview-author {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.post-preview-author-avatar {
+  width: 40px;
+  height: 40px;
+  background: var(--primary-gradient);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 600;
+  font-size: 1.1rem;
+}
+
+.post-preview-author-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.post-preview-author-name {
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 1rem;
+}
+
+.post-preview-date {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.new-post-preview-footer {
+  margin-top: 2rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border-color);
+}
+
+.post-preview-stats {
+  display: flex;
+  gap: 1.5rem;
+}
+
+/* 폼 에러 및 성공 스타일 개선 */
+.form-success-text {
+  color: var(--success-color);
+  font-size: 0.85rem;
+  margin-top: 0.25rem;
+  display: block;
+}
+
+.form-input:valid:not(:placeholder-shown) {
+  border-color: var(--success-color);
+}
+
+.form-input:invalid:not(:placeholder-shown) {
+  border-color: var(--danger-color);
+}
+
+/* 로딩 상태 개선 */
+.ui-loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9998;
+  backdrop-filter: blur(2px);
+}
+
+/* 토스트 알림 (성공 메시지용) */
+.ui-toast {
+  position: fixed;
+  top: 80px;
+  right: 20px;
+  padding: 1rem 1.5rem;
+  background: white;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  border-left: 4px solid var(--success-color);
+  animation: slideInRight 0.3s ease;
+  z-index: 1000;
+  min-width: 300px;
+  max-width: 500px;
+}
+
+.ui-toast--success {
+  border-left-color: var(--success-color);
+}
+
+.ui-toast--info {
+  border-left-color: var(--primary-color);
+}
+
+.ui-toast--warning {
+  border-left-color: var(--warning-color);
+}
+
+.ui-toast--danger {
+  border-left-color: var(--danger-color);
+}
+
+.ui-toast-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+}
+
+.ui-toast-message {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+/* 폼 상태 피드백 */
+.form-field-status {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  font-size: 0.85rem;
+}
+
+.form-field-status--success {
+  color: var(--success-color);
+}
+
+.form-field-status--error {
+  color: var(--danger-color);
+}
+
+.form-field-status--warning {
+  color: var(--warning-color);
+}
+
+.form-field-status-icon {
+  font-size: 0.9rem;
+}
+
+/* 버튼 로딩 상태 개선 */
+.ui-btn:disabled .ui-spinner-small {
+  margin-right: 0.5rem;
+}
+
+.ui-btn-loading {
+  position: relative;
+  color: transparent !important;
+}
+
+.ui-btn-loading::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+/* 접근성 개선 */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* 포커스 링 개선 */
+*:focus {
+  outline: none;
+}
+
+.ui-btn:focus-visible,
+.form-input:focus-visible,
+.form-textarea:focus-visible {
+  outline: 2px solid var(--primary-color);
+  outline-offset: 2px;
+}
+
+.nav-link:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.5);
+  outline-offset: 2px;
+}
+
+/* 커스텀 체크박스 스타일 */
+.custom-checkbox {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  user-select: none;
+}
+
+.custom-checkbox input[type="checkbox"] {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+}
+
+.custom-checkbox-box {
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  background: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.custom-checkbox input:checked + .custom-checkbox-box {
+  background: var(--primary-color);
+  border-color: var(--primary-color);
+  color: white;
+}
+
+.custom-checkbox input:focus-visible + .custom-checkbox-box {
+  outline: 2px solid var(--primary-color);
+  outline-offset: 2px;
+}
+
+.custom-checkbox-box::after {
+  content: '';
+  width: 10px;
+  height: 10px;
+  background: white;
+  mask: url("data:image/svg+xml,%3csvg viewBox='0 0 16 16' fill='white' xmlns='http://www.w3.org/2000/svg'%3e%3cpath d='m13.854 3.646-8 8-.708-.708L3.5 12.586l.854.854 1.646-1.646 7.146-7.146-.646-.646L5.354 11.293 3.707 9.646l-.708.708L5.354 12.708l8.854-8.854-.354-.708z'/%3e%3c/svg%3e") no-repeat center / contain;
+  opacity: 0;
+  transform: scale(0.8);
+  transition: all 0.15s ease;
+}
+
+.custom-checkbox input:checked + .custom-checkbox-box::after {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* 드롭다운/셀렉트 개선 */
+.form-select {
+  appearance: none;
+  background: var(--bg-secondary) url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e") no-repeat right 0.75rem center / 1.25em;
+  padding-right: 2.5rem;
+}
+
+/* 태블릿 반응형 */
+@media (max-width: 1024px) and (min-width: 769px) {
+  .home-posts-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .new-post-container,
+  .post-detail-container {
+    padding: 1.5rem;
+  }
+  
+  .auth-page-container {
+    padding: 1.5rem;
+  }
+}
+
+/* 고해상도 디스플레이 */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  .ui-spinner,
+  .ui-spinner-small {
+    will-change: transform;
+  }
+}
+
+/* 다크모드 준비 (미래 확장용) */
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* 다크모드 색상은 추후 추가 */
+  }
+}
+
+/* 프린트 스타일 */
+@media print {
+  .nav-bar,
+  .ui-btn,
+  .comment-form,
+  .post-detail-actions,
+  .comment-actions,
+  .confirm-modal-overlay {
+    display: none !important;
+  }
+  
+  .post-article,
+  .comments-section {
+    box-shadow: none;
+    border: 1px solid #ccc;
+  }
+  
+  .post-detail-header {
+    background: white !important;
+    color: black !important;
+  }
+  
+  * {
+    background: white !important;
+    color: black !important;
+  }
+}
+
+/* 모션 감소 설정 */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  
+  .ui-spinner,
+  .ui-spinner-small {
+    animation: none;
+    border: 2px solid var(--primary-color);
+    border-radius: 50%;
+  }
+}
+
+/* 고대비 모드 */
+@media (prefers-contrast: high) {
+  :root {
+    --border-color: #000;
+    --text-light: #333;
+  }
+  
+  .ui-btn {
+    border: 2px solid;
+  }
+  
+  .form-input,
+  .form-textarea {
+    border: 2px solid #000;
+  }
+}
+
+/* 스크롤바 스타일 */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-tertiary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--text-light);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-secondary);
+}
+
+/* Firefox 스크롤바 */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--text-light) var(--bg-tertiary);
+}

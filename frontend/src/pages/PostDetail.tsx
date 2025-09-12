@@ -46,7 +46,7 @@ export default function PostDetail() {
       const confirmed = await showConfirm({
         title: "수정 취소",
         message: "수정된 내용이 있습니다.\n정말로 취소하시겠습니까?",
-        confirmText: "취소",
+        confirmText: "취소하기",
         cancelText: "계속 수정",
         type: "warning"
       });
@@ -67,11 +67,12 @@ export default function PostDetail() {
 
   // 댓글 수정 취소
   const cancelEditComment = async () => {
-    if (editCommentText !== comments?.find(c => c.id === editingCommentId)?.content) {
+    const originalContent = comments?.find(c => c.id === editingCommentId)?.content;
+    if (editCommentText !== originalContent) {
       const confirmed = await showConfirm({
         title: "댓글 수정 취소",
         message: "수정된 내용이 있습니다.\n정말로 취소하시겠습니까?",
-        confirmText: "취소",
+        confirmText: "취소하기",
         cancelText: "계속 수정",
         type: "warning"
       });
@@ -101,10 +102,17 @@ export default function PostDetail() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["post", postId] });
       setIsEditingPost(false);
+      setEditTitle("");
+      setEditContent("");
     },
-    onError: (error) => {
+    onError: async (error) => {
       console.error("게시글 수정 실패:", error);
-      alert("게시글 수정에 실패했습니다. 작성자만 수정할 수 있습니다.");
+      await showConfirm({
+        title: "수정 실패",
+        message: "게시글 수정에 실패했습니다.\n작성자만 수정할 수 있습니다.",
+        confirmText: "확인",
+        type: "danger"
+      });
     },
   });
 
@@ -115,9 +123,14 @@ export default function PostDetail() {
       qc.invalidateQueries({ queryKey: ["posts"] });
       navigate("/");
     },
-    onError: (error) => {
+    onError: async (error) => {
       console.error("게시글 삭제 실패:", error);
-      alert("게시글 삭제에 실패했습니다. 작성자만 삭제할 수 있습니다.");
+      await showConfirm({
+        title: "삭제 실패",
+        message: "게시글 삭제에 실패했습니다.\n작성자만 삭제할 수 있습니다.",
+        confirmText: "확인",
+        type: "danger"
+      });
     },
   });
 
@@ -127,11 +140,17 @@ export default function PostDetail() {
       updateComment(postId, commentId, { content: editCommentText }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["comments", postId] });
-      cancelEditComment();
+      setEditingCommentId(null);
+      setEditCommentText("");
     },
-    onError: (error) => {
+    onError: async (error) => {
       console.error("댓글 수정 실패:", error);
-      alert("댓글 수정에 실패했습니다. 작성자만 수정할 수 있습니다.");
+      await showConfirm({
+        title: "수정 실패",
+        message: "댓글 수정에 실패했습니다.\n작성자만 수정할 수 있습니다.",
+        confirmText: "확인",
+        type: "danger"
+      });
     },
   });
 
@@ -141,27 +160,43 @@ export default function PostDetail() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["comments", postId] });
     },
-    onError: (error) => {
+    onError: async (error) => {
       console.error("댓글 삭제 실패:", error);
-      alert("댓글 삭제에 실패했습니다. 작성자만 삭제할 수 있습니다.");
+      await showConfirm({
+        title: "삭제 실패",
+        message: "댓글 삭제에 실패했습니다.\n작성자만 삭제할 수 있습니다.",
+        confirmText: "확인",
+        type: "danger"
+      });
     },
   });
 
   // 게시글 삭제 핸들러
   const handleDeletePost = async () => {
     if (!user) {
-      alert("로그인이 필요합니다.");
+      await showConfirm({
+        title: "로그인 필요",
+        message: "로그인이 필요한 기능입니다.",
+        confirmText: "확인",
+        type: "info"
+      });
       return;
     }
+
     if (!post?.author || post.author.id !== user.id) {
-      alert("작성자만 삭제할 수 있습니다.");
+      await showConfirm({
+        title: "권한 없음",
+        message: "작성자만 삭제할 수 있습니다.",
+        confirmText: "확인",
+        type: "warning"
+      });
       return;
     }
     
     const confirmed = await showConfirm({
       title: "게시글 삭제",
-      message: "정말로 이 게시글을 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.",
-      confirmText: "삭제",
+      message: `정말로 "${post.title}"을(를) 삭제하시겠습니까?\n\n이 작업은 되돌릴 수 없으며, 모든 댓글도 함께 삭제됩니다.`,
+      confirmText: "삭제하기",
       cancelText: "취소",
       type: "danger"
     });
@@ -172,20 +207,35 @@ export default function PostDetail() {
   };
 
   // 댓글 삭제 핸들러
-  const handleDeleteComment = async (commentId: number, authorId?: number) => {
+  const handleDeleteComment = async (commentId: number, authorId?: number, content?: string) => {
     if (!user) {
-      alert("로그인이 필요합니다.");
+      await showConfirm({
+        title: "로그인 필요",
+        message: "로그인이 필요한 기능입니다.",
+        confirmText: "확인",
+        type: "info"
+      });
       return;
     }
+
     if (!authorId || authorId !== user.id) {
-      alert("작성자만 삭제할 수 있습니다.");
+      await showConfirm({
+        title: "권한 없음",
+        message: "작성자만 삭제할 수 있습니다.",
+        confirmText: "확인",
+        type: "warning"
+      });
       return;
     }
     
+    const previewContent = content && content.length > 50 
+      ? `${content.substring(0, 50)}...` 
+      : content;
+
     const confirmed = await showConfirm({
       title: "댓글 삭제",
-      message: "정말로 이 댓글을 삭제하시겠습니까?",
-      confirmText: "삭제",
+      message: `정말로 이 댓글을 삭제하시겠습니까?\n\n"${previewContent}"\n\n이 작업은 되돌릴 수 없습니다.`,
+      confirmText: "삭제하기",
       cancelText: "취소",
       type: "danger"
     });
@@ -212,6 +262,7 @@ export default function PostDetail() {
         <div className="ui-error-container">
           <span className="ui-error-icon">😕</span>
           <h2>게시글을 찾을 수 없습니다</h2>
+          <p>요청하신 게시글이 존재하지 않거나 삭제되었을 수 있습니다.</p>
           <Link to="/" className="ui-btn ui-btn-primary">홈으로 돌아가기</Link>
         </div>
       </div>
@@ -252,7 +303,10 @@ export default function PostDetail() {
                         className="post-delete-btn ui-btn-danger"
                       >
                         {deletePostMut.isPending ? (
-                          <>삭제 중...</>
+                          <>
+                            <span className="ui-spinner-small"></span>
+                            삭제 중...
+                          </>
                         ) : (
                           <>
                             <span>🗑️</span>
@@ -280,28 +334,57 @@ export default function PostDetail() {
                   </button>
                   <button
                     onClick={() => updatePostMut.mutate()}
-                    disabled={updatePostMut.isPending}
+                    disabled={updatePostMut.isPending || !editTitle.trim() || !editContent.trim()}
                     className="ui-btn ui-btn-primary"
                   >
-                    {updatePostMut.isPending ? "저장 중..." : "저장"}
+                    {updatePostMut.isPending ? (
+                      <>
+                        <span className="ui-spinner-small"></span>
+                        저장 중...
+                      </>
+                    ) : (
+                      <>
+                        <span>💾</span>
+                        저장
+                      </>
+                    )}
                   </button>
                 </div>
               </div>
               <div className="post-edit-form">
-                <input
-                  type="text"
-                  className="form-input"
-                  value={editTitle}
-                  onChange={(e) => setEditTitle(e.target.value)}
-                  placeholder="제목"
-                />
-                <textarea
-                  className="form-textarea"
-                  value={editContent}
-                  onChange={(e) => setEditContent(e.target.value)}
-                  placeholder="내용"
-                  rows={10}
-                />
+                <div className="form-group">
+                  <label htmlFor="edit-title" className="form-label">
+                    <span className="form-label-icon">📝</span>
+                    제목
+                  </label>
+                  <input
+                    id="edit-title"
+                    type="text"
+                    className="form-input"
+                    value={editTitle}
+                    onChange={(e) => setEditTitle(e.target.value)}
+                    placeholder="제목을 입력하세요"
+                    maxLength={100}
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="edit-content" className="form-label">
+                    <span className="form-label-icon">📄</span>
+                    내용
+                  </label>
+                  <textarea
+                    id="edit-content"
+                    className="form-textarea"
+                    value={editContent}
+                    onChange={(e) => setEditContent(e.target.value)}
+                    placeholder="내용을 입력하세요"
+                    rows={15}
+                    maxLength={2000}
+                  />
+                  <div className={`form-char-count ${editContent.length > 1800 ? 'form-char-count--warning' : ''} ${editContent.length >= 2000 ? 'form-char-count--error' : ''}`}>
+                    {editContent.length} / 2000
+                  </div>
+                </div>
               </div>
             </div>
           )}
@@ -318,7 +401,18 @@ export default function PostDetail() {
               </span>
             </div>
             <div className="post-share-buttons">
-              <button className="post-share-btn" title="공유하기">
+              <button 
+                className="post-share-btn" 
+                title="링크 복사"
+                onClick={async () => {
+                  try {
+                    await navigator.clipboard.writeText(window.location.href);
+                    // 성공 피드백 표시 (토스트 메시지 등)
+                  } catch (err) {
+                    console.error('링크 복사 실패:', err);
+                  }
+                }}
+              >
                 <span>🔗</span>
               </button>
               <button className="post-share-btn" title="북마크">
@@ -344,6 +438,7 @@ export default function PostDetail() {
           {commentsLoading ? (
             <div className="ui-loading-container">
               <div className="ui-spinner"></div>
+              <p className="ui-loading-text">댓글을 불러오는 중...</p>
             </div>
           ) : comments && comments.length > 0 ? (
             <div className="comments-list">
@@ -352,25 +447,42 @@ export default function PostDetail() {
                   {editingCommentId === c.id ? (
                     // 댓글 수정 모드
                     <div className="comment-edit-mode">
-                      <textarea
-                        className="comment-edit-textarea"
-                        value={editCommentText}
-                        onChange={(e) => setEditCommentText(e.target.value)}
-                        rows={3}
-                      />
+                      <div className="form-group">
+                        <textarea
+                          className="comment-edit-textarea"
+                          value={editCommentText}
+                          onChange={(e) => setEditCommentText(e.target.value)}
+                          placeholder="댓글을 입력하세요..."
+                          rows={4}
+                          maxLength={500}
+                        />
+                        <div className={`form-char-count ${editCommentText.length > 450 ? 'form-char-count--warning' : ''} ${editCommentText.length >= 500 ? 'form-char-count--error' : ''}`}>
+                          {editCommentText.length} / 500
+                        </div>
+                      </div>
                       <div className="comment-edit-actions">
                         <button
                           onClick={cancelEditComment}
-                          className="ui-btn ui-btn-secondary"
+                          className="ui-btn ui-btn-secondary ui-btn-sm"
                         >
                           취소
                         </button>
                         <button
                           onClick={() => updateCommentMut.mutate(c.id)}
-                          disabled={updateCommentMut.isPending}
-                          className="ui-btn ui-btn-primary"
+                          disabled={updateCommentMut.isPending || !editCommentText.trim()}
+                          className="ui-btn ui-btn-primary ui-btn-sm"
                         >
-                          {updateCommentMut.isPending ? "저장 중..." : "저장"}
+                          {updateCommentMut.isPending ? (
+                            <>
+                              <span className="ui-spinner-small"></span>
+                              저장 중...
+                            </>
+                          ) : (
+                            <>
+                              <span>💾</span>
+                              저장
+                            </>
+                          )}
                         </button>
                       </div>
                     </div>
@@ -394,15 +506,17 @@ export default function PostDetail() {
                             <button
                               onClick={() => startEditComment(c.id, c.content)}
                               className="comment-edit-btn"
+                              title="댓글 수정"
                             >
                               수정
                             </button>
                             <button
-                              onClick={() => handleDeleteComment(c.id, c.author?.id)}
+                              onClick={() => handleDeleteComment(c.id, c.author?.id, c.content)}
                               disabled={deleteCommentMut.isPending}
                               className="comment-delete-btn"
+                              title="댓글 삭제"
                             >
-                              삭제
+                              {deleteCommentMut.isPending ? "삭제 중..." : "삭제"}
                             </button>
                           </div>
                         )}
@@ -443,9 +557,13 @@ export default function PostDetail() {
                       addCommentMut.mutate();
                     }
                   }}
-                  rows={3}
+                  rows={4}
                   disabled={addCommentMut.isPending}
+                  maxLength={500}
                 />
+                <div className={`form-char-count ${text.length > 450 ? 'form-char-count--warning' : ''} ${text.length >= 500 ? 'form-char-count--error' : ''}`}>
+                  {text.length} / 500
+                </div>
               </div>
 
               <div className="comment-form-footer">
@@ -461,7 +579,10 @@ export default function PostDetail() {
                   className="comment-submit-btn"
                 >
                   {addCommentMut.isPending ? (
-                    <>작성 중...</>
+                    <>
+                      <span className="ui-spinner-small"></span>
+                      작성 중...
+                    </>
                   ) : (
                     <>
                       댓글 달기

@@ -3,8 +3,9 @@ import { useMutation } from "@tanstack/react-query";
 import { register, login } from "../api/auth";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate, Link } from "react-router-dom";
+import { useConfirmModal } from "../components/ConfirmModal";
 
-export default function Signup() {
+export function Signup() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -13,6 +14,7 @@ export default function Signup() {
 
   const { login: setAuth } = useAuth();
   const nav = useNavigate();
+  const { showConfirm, ConfirmModalComponent } = useConfirmModal();
 
   // 클라이언트 사이드 유효성 검증 함수
   const validateInput = () => {
@@ -20,6 +22,10 @@ export default function Signup() {
     
     if (!username || username.length < 3 || username.length > 20) {
       errors.push("사용자명은 3-20자 사이여야 합니다");
+    }
+    
+    if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+      errors.push("사용자명은 영문, 숫자, 언더스코어(_)만 사용할 수 있습니다");
     }
     
     if (!password || password.length < 6) {
@@ -61,20 +67,52 @@ export default function Signup() {
 
       return { user, loginResponse };
     },
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       // JWT 토큰과 사용자 정보를 AuthContext에 저장
       setAuth(data.loginResponse.token, data.loginResponse.user);
+      
+      // 성공 메시지 표시
+      await showConfirm({
+        title: "회원가입 완료! 🎉",
+        message: `환영합니다, ${data.user.username}님!\n\n이제 자유롭게 글을 작성하고 다른 사용자들과 소통할 수 있습니다.`,
+        confirmText: "시작하기",
+        type: "info"
+      });
+      
       nav("/");
     },
-    onError: (error: any) => {
+    onError: async (error: any) => {
       console.error("회원가입 실패:", error);
       
-      // 서버에서 온 상세한 에러 메시지 추출
-      if (error.response?.data?.message) {
-        console.error("서버 에러 메시지:", error.response.data.message);
-      } else if (error.response?.data?.fieldErrors) {
-        console.error("필드 검증 에러:", error.response.data.fieldErrors);
+      let errorMessage = "회원가입 중 오류가 발생했습니다.";
+      
+      // 클라이언트 사이드 에러
+      if (error.message && !error.response) {
+        errorMessage = error.message;
       }
+      // 서버 에러
+      else if (error.response?.status === 400) {
+        if (error.response.data?.message?.includes("already exists") || 
+            error.response.data?.message?.includes("이미 존재")) {
+          errorMessage = "이미 사용 중인 사용자명입니다. 다른 이름을 선택해주세요.";
+        } else {
+          errorMessage = error.response.data?.message || "입력 정보를 확인해주세요.";
+        }
+      }
+      else if (error.response?.data?.fieldErrors) {
+        const fieldErrors = error.response.data.fieldErrors;
+        errorMessage = Object.values(fieldErrors).join(", ");
+      }
+      else if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      }
+
+      await showConfirm({
+        title: "회원가입 실패",
+        message: errorMessage,
+        confirmText: "확인",
+        type: "danger"
+      });
     }
   });
 
@@ -94,34 +132,13 @@ export default function Signup() {
 
   const passwordStrength = getPasswordStrength();
 
-  // 에러 메시지 표시 함수
-  const getErrorMessage = () => {
-    if (!mut.error) return null;
-    
-    const error = mut.error as any;
-    
-    // 클라이언트 사이드 에러
-    if (error.message && !error.response) {
-      return error.message;
-    }
-    
-    // 서버 에러
-    if (error.response?.data?.message) {
-      return error.response.data.message;
-    }
-    
-    // 필드 검증 에러
-    if (error.response?.data?.fieldErrors) {
-      const fieldErrors = error.response.data.fieldErrors;
-      return Object.values(fieldErrors).join(", ");
-    }
-    
-    // 기본 에러 메시지
-    if (error.response?.status === 400) {
-      return "입력 정보를 확인해주세요. 이미 사용 중인 아이디일 수 있습니다.";
-    }
-    
-    return "회원가입 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.";
+  const handleTermsClick = async () => {
+    await showConfirm({
+      title: "이용약관",
+      message: "이용약관과 개인정보처리방침은 준비 중입니다.\n\n현재 테스트 버전으로 운영되고 있으며, 정식 서비스 시 제공될 예정입니다.",
+      confirmText: "확인",
+      type: "info"
+    });
   };
 
   return (
@@ -156,10 +173,15 @@ export default function Signup() {
                 autoComplete="username"
                 minLength={3}
                 maxLength={20}
+                pattern="[a-zA-Z0-9_]+"
+                disabled={mut.isPending}
               />
-              {username && (username.length < 3 || username.length > 20) && (
+              {username && (username.length < 3 || username.length > 20 || !/^[a-zA-Z0-9_]+$/.test(username)) && (
                 <span className="form-error-text">
-                  사용자명은 3-20자 사이여야 합니다
+                  {username.length < 3 || username.length > 20 
+                    ? "사용자명은 3-20자 사이여야 합니다" 
+                    : "영문, 숫자, 언더스코어(_)만 사용할 수 있습니다"
+                  }
                 </span>
               )}
             </div>
@@ -179,12 +201,15 @@ export default function Signup() {
                   required
                   autoComplete="new-password"
                   minLength={6}
+                  disabled={mut.isPending}
                 />
                 <button
                   type="button"
                   className="form-password-toggle"
                   onClick={() => setShowPassword(!showPassword)}
                   aria-label={showPassword ? "비밀번호 숨기기" : "비밀번호 보기"}
+                  disabled={mut.isPending}
+                  tabIndex={-1}
                 >
                   {showPassword ? "👁️" : "👁️‍🗨️"}
                 </button>
@@ -239,10 +264,16 @@ export default function Signup() {
                 placeholder="비밀번호를 다시 입력하세요"
                 required
                 autoComplete="new-password"
+                disabled={mut.isPending}
               />
               {confirmPassword && password !== confirmPassword && (
                 <span className="form-error-text">
                   비밀번호가 일치하지 않습니다
+                </span>
+              )}
+              {confirmPassword && password === confirmPassword && confirmPassword.length > 0 && (
+                <span style={{ color: "var(--success-color)", fontSize: "0.85rem", marginTop: "0.25rem", display: "block" }}>
+                  ✓ 비밀번호가 일치합니다
                 </span>
               )}
             </div>
@@ -253,17 +284,37 @@ export default function Signup() {
                 id="terms"
                 checked={agreedToTerms}
                 onChange={(e) => setAgreedToTerms(e.target.checked)}
+                disabled={mut.isPending}
               />
               <label htmlFor="terms" className="auth-terms-label">
-                <a href="#" onClick={(e) => e.preventDefault()}>이용약관</a> 및{" "}
-                <a href="#" onClick={(e) => e.preventDefault()}>개인정보처리방침</a>에 동의합니다
+                <button 
+                  type="button" 
+                  onClick={handleTermsClick}
+                  style={{ background: "none", border: "none", color: "var(--primary-color)", textDecoration: "underline", cursor: "pointer", padding: 0, font: "inherit" }}
+                >
+                  이용약관
+                </button> 및{" "}
+                <button 
+                  type="button" 
+                  onClick={handleTermsClick}
+                  style={{ background: "none", border: "none", color: "var(--primary-color)", textDecoration: "underline", cursor: "pointer", padding: 0, font: "inherit" }}
+                >
+                  개인정보처리방침
+                </button>에 동의합니다
               </label>
             </div>
 
             <button
               type="submit"
               className="auth-submit-btn"
-              disabled={mut.isPending || !agreedToTerms || password !== confirmPassword || username.length < 3 || password.length < 6}
+              disabled={
+                mut.isPending || 
+                !agreedToTerms || 
+                password !== confirmPassword || 
+                username.length < 3 || 
+                password.length < 6 ||
+                !/^[a-zA-Z0-9_]+$/.test(username)
+              }
             >
               {mut.isPending ? (
                 <>
@@ -274,13 +325,6 @@ export default function Signup() {
                 "회원가입"
               )}
             </button>
-
-            {mut.isError && (
-              <div className="ui-error-message">
-                <span>⚠️</span>
-                {getErrorMessage()}
-              </div>
-            )}
           </form>
 
           <div className="auth-signup-benefits">
@@ -307,6 +351,9 @@ export default function Signup() {
           </p>
         </div>
       </div>
+      
+      {/* 커스텀 모달 컴포넌트 */}
+      <ConfirmModalComponent />
     </div>
   );
 }
