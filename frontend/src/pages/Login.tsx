@@ -91,30 +91,39 @@ export default function Login() {
         errorMessage = "서버에 문제가 발생했습니다. 잠시 후 다시 시도해주세요.";
       }
 
-      await showConfirm({
-        title: "로그인 실패",
-        message: errorMessage,
-        confirmText: "확인",
-        type: "danger"
+      // 로그인 실패 모달에서 취소 버튼 제거
+      const result = new Promise<boolean>((resolve) => {
+        showConfirm({
+          title: "로그인 실패",
+          message: errorMessage,
+          confirmText: "확인",
+          type: "danger"
+        }).then(() => resolve(true));
       });
+      
+      await result;
     }
   });
 
   const handleForgotPassword = async () => {
+    // 비밀번호 찾기 모달에서 showCancel: false로 취소 버튼 제거
     await showConfirm({
       title: "비밀번호 찾기",
       message: "비밀번호 찾기 기능은 준비 중입니다.\n\n관리자에게 문의하시거나 새로운 계정을 만들어 보세요.",
       confirmText: "확인",
-      type: "info"
+      type: "info",
+      showCancel: false
     });
   };
 
   const handleSocialLogin = async (provider: string) => {
+    // 소셜 로그인 모달에서 showCancel: false로 취소 버튼 제거
     await showConfirm({
       title: "소셜 로그인",
       message: `${provider} 로그인은 준비 중입니다.\n\n곧 지원될 예정입니다.`,
       confirmText: "확인",
-      type: "info"
+      type: "info",
+      showCancel: false
     });
   };
 

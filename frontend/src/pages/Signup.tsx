@@ -71,14 +71,18 @@ export function Signup() {
       // JWT 토큰과 사용자 정보를 AuthContext에 저장
       setAuth(data.loginResponse.token, data.loginResponse.user);
       
-      // 성공 메시지 표시
-      await showConfirm({
-        title: "회원가입 완료! 🎉",
-        message: `환영합니다, ${data.user.username}님!\n\n이제 자유롭게 글을 작성하고 다른 사용자들과 소통할 수 있습니다.`,
-        confirmText: "시작하기",
-        type: "info"
+      // 성공 메시지 표시 - 취소 버튼 제거
+      const result = new Promise<boolean>((resolve) => {
+        // showConfirm을 Promise로 감싸서 항상 true 반환하도록 수정
+        showConfirm({
+          title: "회원가입 완료! 🎉",
+          message: `환영합니다, ${data.user.username}님!\n\n이제 자유롭게 글을 작성하고 다른 사용자들과 소통할 수 있습니다.`,
+          confirmText: "시작하기",
+          type: "info"
+        }).then(() => resolve(true));
       });
       
+      await result;
       nav("/");
     },
     onError: async (error: any) => {
@@ -107,12 +111,17 @@ export function Signup() {
         errorMessage = error.response.data.message;
       }
 
-      await showConfirm({
-        title: "회원가입 실패",
-        message: errorMessage,
-        confirmText: "확인",
-        type: "danger"
+      // 에러 메시지 표시 - 취소 버튼 제거
+      const result = new Promise<boolean>((resolve) => {
+        showConfirm({
+          title: "회원가입 실패",
+          message: errorMessage,
+          confirmText: "확인",
+          type: "danger"
+        }).then(() => resolve(true));
       });
+      
+      await result;
     }
   });
 
@@ -133,11 +142,13 @@ export function Signup() {
   const passwordStrength = getPasswordStrength();
 
   const handleTermsClick = async () => {
+    // 이용약관 모달도 showCancel: false로 취소 버튼 제거
     await showConfirm({
       title: "이용약관",
       message: "이용약관과 개인정보처리방침은 준비 중입니다.\n\n현재 테스트 버전으로 운영되고 있으며, 정식 서비스 시 제공될 예정입니다.",
       confirmText: "확인",
-      type: "info"
+      type: "info",
+      showCancel: false
     });
   };
 

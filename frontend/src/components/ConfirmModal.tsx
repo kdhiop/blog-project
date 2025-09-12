@@ -10,6 +10,7 @@ interface ConfirmModalProps {
   onCancel: () => void;
   type?: 'danger' | 'warning' | 'info';
   isLoading?: boolean;
+  showCancel?: boolean; // 새로 추가: 취소 버튼 표시 여부
 }
 
 export default function ConfirmModal({
@@ -21,7 +22,8 @@ export default function ConfirmModal({
   onConfirm,
   onCancel,
   type = 'danger',
-  isLoading = false
+  isLoading = false,
+  showCancel = true // 기본값은 true (기존 동작 유지)
 }: ConfirmModalProps) {
   const [isVisible, setIsVisible] = useState(false);
 
@@ -39,13 +41,13 @@ export default function ConfirmModal({
   }, [isOpen]);
 
   const handleBackdropClick = (e: React.MouseEvent) => {
-    if (e.target === e.currentTarget) {
+    if (e.target === e.currentTarget && showCancel) {
       onCancel();
     }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Escape') {
+    if (e.key === 'Escape' && showCancel) {
       onCancel();
     }
     if (e.key === 'Enter') {
@@ -113,20 +115,22 @@ export default function ConfirmModal({
         </div>
 
         {/* Footer */}
-        <div className="confirm-modal-footer">
-          <button
-            type="button"
-            onClick={onCancel}
-            disabled={isLoading}
-            className="confirm-modal-btn confirm-modal-btn--cancel"
-          >
-            {cancelText}
-          </button>
+        <div className={`confirm-modal-footer ${!showCancel ? 'confirm-modal-footer--single' : ''}`}>
+          {showCancel && (
+            <button
+              type="button"
+              onClick={onCancel}
+              disabled={isLoading}
+              className="confirm-modal-btn confirm-modal-btn--cancel"
+            >
+              {cancelText}
+            </button>
+          )}
           <button
             type="button"
             onClick={onConfirm}
             disabled={isLoading}
-            className={`confirm-modal-btn confirm-modal-btn--confirm confirm-modal-btn--${type}`}
+            className={`confirm-modal-btn confirm-modal-btn--confirm confirm-modal-btn--${type} ${!showCancel ? 'confirm-modal-btn--single' : ''}`}
           >
             {isLoading ? (
               <>
@@ -152,6 +156,7 @@ export function useConfirmModal() {
     confirmText?: string;
     cancelText?: string;
     type?: 'danger' | 'warning' | 'info';
+    showCancel?: boolean; // 새로 추가
     onConfirm?: () => void;
     onCancel?: () => void;
   }>({
@@ -165,13 +170,15 @@ export function useConfirmModal() {
     message,
     confirmText = '확인',
     cancelText = '취소',
-    type = 'danger'
+    type = 'danger',
+    showCancel = true // 새로 추가: 기본값은 true
   }: {
     title: string;
     message: string;
     confirmText?: string;
     cancelText?: string;
     type?: 'danger' | 'warning' | 'info';
+    showCancel?: boolean; // 새로 추가
   }) => {
     return new Promise<boolean>((resolve) => {
       setModalState({
@@ -181,6 +188,7 @@ export function useConfirmModal() {
         confirmText,
         cancelText,
         type,
+        showCancel,
         onConfirm: () => {
           setModalState(prev => ({ ...prev, isOpen: false }));
           resolve(true);
@@ -193,6 +201,27 @@ export function useConfirmModal() {
     });
   };
 
+  // 알림용 함수 (확인 버튼만 있는 모달)
+  const showAlert = ({
+    title,
+    message,
+    confirmText = '확인',
+    type = 'info'
+  }: {
+    title: string;
+    message: string;
+    confirmText?: string;
+    type?: 'danger' | 'warning' | 'info';
+  }) => {
+    return showConfirm({
+      title,
+      message,
+      confirmText,
+      type,
+      showCancel: false
+    });
+  };
+
   const ConfirmModalComponent = () => (
     <ConfirmModal
       isOpen={modalState.isOpen}
@@ -201,10 +230,11 @@ export function useConfirmModal() {
       confirmText={modalState.confirmText}
       cancelText={modalState.cancelText}
       type={modalState.type}
+      showCancel={modalState.showCancel}
       onConfirm={modalState.onConfirm || (() => {})}
       onCancel={modalState.onCancel || (() => {})}
     />
   );
 
-  return { showConfirm, ConfirmModalComponent };
+  return { showConfirm, showAlert, ConfirmModalComponent };
 }

@@ -2077,6 +2077,28 @@ a:hover {
   }
 }
 
+/* 단일 버튼 모드 스타일 */
+.confirm-modal-btn--single {
+  min-width: 120px;
+}
+
+/* 단일 버튼일 때 footer 중앙 정렬 */
+.confirm-modal-footer--single {
+  justify-content: center;
+}
+
+/* 모바일에서 단일 버튼 전체 너비 */
+@media (max-width: 768px) {
+  .confirm-modal-btn--single {
+    width: 100%;
+    min-width: unset;
+  }
+  
+  .confirm-modal-footer--single {
+    flex-direction: column;
+  }
+}
+
 /* =====================================
    UTILITY CLASSES
    ===================================== */
