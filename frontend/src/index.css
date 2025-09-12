@@ -3299,13 +3299,6 @@ mark {
   }
 }
 
-/* 다크모드 준비 (미래 확장용) */
-@media (prefers-color-scheme: dark) {
-  :root {
-    /* 다크모드 색상은 추후 추가 */
-  }
-}
-
 /* 프린트 스타일 */
 @media print {
   .nav-bar,
