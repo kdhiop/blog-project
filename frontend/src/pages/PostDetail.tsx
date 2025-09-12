@@ -41,7 +41,19 @@ export default function PostDetail() {
   };
 
   // 게시글 수정 취소
-  const cancelEditPost = () => {
+  const cancelEditPost = async () => {
+    if (editTitle !== post?.title || editContent !== post?.content) {
+      const confirmed = await showConfirm({
+        title: "수정 취소",
+        message: "수정된 내용이 있습니다.\n정말로 취소하시겠습니까?",
+        confirmText: "취소",
+        cancelText: "계속 수정",
+        type: "warning"
+      });
+      
+      if (!confirmed) return;
+    }
+    
     setIsEditingPost(false);
     setEditTitle("");
     setEditContent("");
@@ -54,7 +66,19 @@ export default function PostDetail() {
   };
 
   // 댓글 수정 취소
-  const cancelEditComment = () => {
+  const cancelEditComment = async () => {
+    if (editCommentText !== comments?.find(c => c.id === editingCommentId)?.content) {
+      const confirmed = await showConfirm({
+        title: "댓글 수정 취소",
+        message: "수정된 내용이 있습니다.\n정말로 취소하시겠습니까?",
+        confirmText: "취소",
+        cancelText: "계속 수정",
+        type: "warning"
+      });
+      
+      if (!confirmed) return;
+    }
+    
     setEditingCommentId(null);
     setEditCommentText("");
   };
@@ -123,6 +147,7 @@ export default function PostDetail() {
     },
   });
 
+  // 게시글 삭제 핸들러
   const handleDeletePost = async () => {
     if (!user) {
       alert("로그인이 필요합니다.");
@@ -146,7 +171,8 @@ export default function PostDetail() {
     }
   };
 
-  const handleDeleteComment = (commentId: number, authorId?: number) => {
+  // 댓글 삭제 핸들러
+  const handleDeleteComment = async (commentId: number, authorId?: number) => {
     if (!user) {
       alert("로그인이 필요합니다.");
       return;
@@ -155,7 +181,16 @@ export default function PostDetail() {
       alert("작성자만 삭제할 수 있습니다.");
       return;
     }
-    if (window.confirm("정말로 이 댓글을 삭제하시겠습니까?")) {
+    
+    const confirmed = await showConfirm({
+      title: "댓글 삭제",
+      message: "정말로 이 댓글을 삭제하시겠습니까?",
+      confirmText: "삭제",
+      cancelText: "취소",
+      type: "danger"
+    });
+
+    if (confirmed) {
       deleteCommentMut.mutate(commentId);
     }
   };
@@ -448,6 +483,8 @@ export default function PostDetail() {
           )}
         </section>
       </div>
+      
+      {/* 커스텀 모달 컴포넌트 */}
       <ConfirmModalComponent />
     </div>
   );
