@@ -882,6 +882,7 @@ a:hover {
   margin-bottom: 1rem;
   display: -webkit-box;
   -webkit-line-clamp: 3;
+  line-clamp: 3;  /* 이 줄 추가 */
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
@@ -2363,13 +2364,13 @@ a:hover {
 
 /* Search Bar Container */
 .search-bar-container {
-  margin-bottom: 2rem;
+  margin-bottom: 3.5rem;
   position: relative;
 }
 
 .home-search-bar {
   max-width: 600px;
-  margin: 0 auto;
+  margin: 0 auto 1.5rem auto;
 }
 
 .search-form {
@@ -2577,7 +2578,7 @@ a:hover {
 
 /* Search Results */
 .search-results-info {
-  margin-bottom: 2rem;
+  margin-bottom: 3rem;
   text-align: center;
   padding: 1.5rem;
   background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
