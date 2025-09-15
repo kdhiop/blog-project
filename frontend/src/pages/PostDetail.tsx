@@ -38,11 +38,13 @@ export default function PostDetail() {
   // 비밀글 관련 상태
   const [showSecretModal, setShowSecretModal] = useState(false);
   const [secretPasswordError, setSecretPasswordError] = useState("");
-  const [verifyingPassword, setVerifyingPassword] = useState(false);
 
-  // 비밀글 비밀번호 확인
+  // 비밀글 비밀번호 확인 뮤테이션
   const verifySecretMutation = useMutation({
-    mutationFn: (password: string) => verifySecretPassword(postId, password),
+    mutationFn: (password: string) => {
+      setSecretPasswordError(""); // 에러 초기화
+      return verifySecretPassword(postId, password);
+    },
     onSuccess: (verifiedPost) => {
       qc.setQueryData(["post", postId], verifiedPost);
       setShowSecretModal(false);
@@ -329,8 +331,6 @@ export default function PostDetail() {
 
   // 비밀글 비밀번호 입력 모달 핸들러
   const handleSecretPasswordSubmit = (password: string) => {
-    setVerifyingPassword(true);
-    setSecretPasswordError("");
     verifySecretMutation.mutate(password);
   };
 

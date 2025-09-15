@@ -29,25 +29,30 @@ public class PostController {
 	}
 
 	@GetMapping
-	public List<PostResponse> list(@RequestParam(value = "search", required = false) String searchQuery) {
+	public List<PostResponse> list(@RequestParam(value = "search", required = false) String searchQuery,
+								   @AuthenticationPrincipal CustomUserDetails userDetails) {
+		Long currentUserId = userDetails != null ? userDetails.getId() : null;
+		
 		if (searchQuery != null && !searchQuery.trim().isEmpty()) {
-			logger.debug("게시글 검색 요청: query='{}'", searchQuery);
+			logger.debug("게시글 검색 요청: query='{}', userId={}", searchQuery, currentUserId);
 			return postService.search(searchQuery.trim()).stream()
-				.map(this::toResp)
+				.map(post -> toResp(post, currentUserId))
 				.collect(Collectors.toList());
 		} else {
-			logger.debug("공개 게시글 목록 조회 요청");
+			logger.debug("전체 게시글 목록 조회 요청 (비밀글 포함), userId={}", currentUserId);
 			return postService.listAll().stream()
-				.map(this::toResp)
+				.map(post -> toResp(post, currentUserId))
 				.collect(Collectors.toList());
 		}
 	}
 
 	// 별도의 검색 전용 엔드포인트
 	@GetMapping("/search")
-	public List<PostResponse> search(@RequestParam("q") String query) {
+	public List<PostResponse> search(@RequestParam("q") String query,
+									 @AuthenticationPrincipal CustomUserDetails userDetails) {
 		try {
-			logger.info("게시글 검색: query='{}'", query);
+			Long currentUserId = userDetails != null ? userDetails.getId() : null;
+			logger.info("게시글 검색: query='{}', userId={}", query, currentUserId);
 			
 			if (query == null || query.trim().isEmpty()) {
 				logger.warn("빈 검색어로 검색 시도");
@@ -64,7 +69,7 @@ public class PostController {
 			logger.info("검색 완료: query='{}', results={}", trimmedQuery, searchResults.size());
 			
 			return searchResults.stream()
-				.map(this::toResp)
+				.map(post -> toResp(post, currentUserId))
 				.collect(Collectors.toList());
 				
 		} catch (IllegalArgumentException e) {
@@ -80,26 +85,31 @@ public class PostController {
 	public ResponseEntity<PostResponse> get(@PathVariable Long id, 
 											@AuthenticationPrincipal CustomUserDetails userDetails) {
 		try {
-			logger.debug("게시글 상세 조회: postId={}", id);
+			Long currentUserId = userDetails != null ? userDetails.getId() : null;
+			logger.debug("게시글 상세 조회: postId={}, userId={}", id, currentUserId);
 			Post post = postService.get(id);
 			
-			PostResponse response = toResp(post);
+			PostResponse response = toResp(post, currentUserId);
 			
 			// 비밀글 처리
 			if (Boolean.TRUE.equals(post.getIsSecret())) {
 				// 작성자인지 확인
-				boolean isAuthor = userDetails != null && 
+				boolean isAuthor = currentUserId != null && 
 					post.getAuthor() != null && 
-					post.getAuthor().getId().equals(userDetails.getId());
+					post.getAuthor().getId().equals(currentUserId);
 				
 				if (isAuthor) {
 					// 작성자는 항상 접근 가능
 					response.setHasAccess(true);
+					response.setContent(post.getContent()); // 실제 내용 설정
 				} else {
 					// 작성자가 아니면 내용 숨김
 					response.setContent("[비밀글입니다. 비밀번호를 입력해주세요.]");
 					response.setHasAccess(false);
 				}
+				
+				logger.debug("비밀글 접근 처리: postId={}, isAuthor={}, hasAccess={}", 
+						   id, isAuthor, response.getHasAccess());
 			} else {
 				response.setHasAccess(true);
 			}
@@ -115,16 +125,19 @@ public class PostController {
 	@PostMapping("/{id}/verify-password")
 	public ResponseEntity<PostResponse> verifySecretPassword(
 			@PathVariable Long id,
-			@Valid @RequestBody SecretPasswordRequest request) {
+			@Valid @RequestBody SecretPasswordRequest request,
+			@AuthenticationPrincipal CustomUserDetails userDetails) {
 		try {
-			logger.info("비밀글 비밀번호 확인: postId={}", id);
+			Long currentUserId = userDetails != null ? userDetails.getId() : null;
+			logger.info("비밀글 비밀번호 확인: postId={}, userId={}", id, currentUserId);
 			
 			boolean isValid = postService.verifySecretPassword(id, request.getPassword());
 			
 			if (isValid) {
 				Post post = postService.get(id);
-				PostResponse response = toResp(post);
+				PostResponse response = toResp(post, currentUserId);
 				response.setHasAccess(true);
+				response.setContent(post.getContent()); // 실제 내용 설정
 				
 				logger.info("비밀글 접근 성공: postId={}", id);
 				return ResponseEntity.ok(response);
@@ -155,7 +168,7 @@ public class PostController {
 			
 			Post post = postService.create(userDetails.getId(), req.getTitle(), req.getContent(), 
 										   req.getIsSecret(), req.getSecretPassword());
-			return ResponseEntity.ok(toResp(post));
+			return ResponseEntity.ok(toResp(post, userDetails.getId()));
 		} catch (SecurityException e) {
 			throw e;
 		} catch (Exception e) {
@@ -180,7 +193,7 @@ public class PostController {
 			
 			Post post = postService.update(id, userDetails.getId(), req.getTitle(), req.getContent(),
 										   req.getIsSecret(), req.getSecretPassword());
-			return ResponseEntity.ok(toResp(post));
+			return ResponseEntity.ok(toResp(post, userDetails.getId()));
 		} catch (SecurityException e) {
 			logger.warn("게시글 수정 권한 없음: postId={}, userId={}", id, userDetails != null ? userDetails.getId() : null);
 			throw e;
@@ -212,18 +225,41 @@ public class PostController {
 		}
 	}
 
-	private PostResponse toResp(Post p) {
+	// PostResponse 변환 메서드 (현재 사용자 ID 고려)
+	private PostResponse toResp(Post p, Long currentUserId) {
 		PostResponse r = new PostResponse();
 		r.setId(p.getId());
 		r.setTitle(p.getTitle());
-		r.setContent(p.getContent());
 		r.setIsSecret(p.getIsSecret());
-		r.setHasAccess(true); // 기본값, 필요에 따라 조정
 		
+		// 작성자 정보 설정
 		if (p.getAuthor() != null) {
 			r.setAuthorId(p.getAuthor().getId());
 			r.setAuthorUsername(p.getAuthor().getUsername());
 		}
+		
+		// 비밀글 처리 로직
+		if (Boolean.TRUE.equals(p.getIsSecret())) {
+			// 작성자인지 확인
+			boolean isAuthor = currentUserId != null && 
+				p.getAuthor() != null && 
+				p.getAuthor().getId().equals(currentUserId);
+			
+			if (isAuthor) {
+				// 작성자는 실제 내용을 볼 수 있음
+				r.setContent(p.getContent());
+				r.setHasAccess(true);
+			} else {
+				// 작성자가 아니면 미리보기 메시지
+				r.setContent("[비밀글입니다. 클릭하여 비밀번호를 입력해주세요.]");
+				r.setHasAccess(false);
+			}
+		} else {
+			// 공개글은 모든 내용 표시
+			r.setContent(p.getContent());
+			r.setHasAccess(true);
+		}
+		
 		return r;
 	}
 }

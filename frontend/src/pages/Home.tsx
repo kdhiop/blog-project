@@ -3,8 +3,10 @@ import { getPosts, searchPosts, type Post } from "../api/posts";
 import { Link, useLocation } from "react-router-dom";
 import { useState, useEffect } from "react";
 import SearchBar from "../components/SearchBar";
+import { useAuth } from "../context/AuthContext";
 
 export default function Home() {
+  const { user } = useAuth();
   const location = useLocation();
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearching, setIsSearching] = useState(false);
@@ -189,16 +191,24 @@ export default function Home() {
       ) : (
         <div className="home-posts-grid">
           {data!.map((post: Post) => (
-            <article key={post.id} className="post-card">
+            <article key={post.id} className={`post-card ${post.isSecret ? 'post-card--secret' : ''}`}>
               <Link to={`/posts/${post.id}`} className="post-card-link">
                 <div className="post-card-header">
-                  <h2 className="post-card-title">
-                    {isSearching ? (
-                      <HighlightedText text={post.title} highlight={searchQuery} />
-                    ) : (
-                      post.title
+                  <div className="post-card-title-wrapper">
+                    {post.isSecret && (
+                      <div className="post-card-secret-badge">
+                        <span className="post-card-secret-icon">🔐</span>
+                        <span className="post-card-secret-text">비밀글</span>
+                      </div>
                     )}
-                  </h2>
+                    <h2 className="post-card-title">
+                      {isSearching ? (
+                        <HighlightedText text={post.title} highlight={searchQuery} />
+                      ) : (
+                        post.title
+                      )}
+                    </h2>
+                  </div>
                   {post.author && (
                     <div className="post-card-meta">
                       <span className="post-card-author-avatar">✍️</span>
@@ -209,22 +219,52 @@ export default function Home() {
                           post.author.username
                         )}
                       </span>
+                      {post.isSecret && post.author.id === user?.id && (
+                        <span className="post-card-owner-badge" title="내가 작성한 비밀글">
+                          👤
+                        </span>
+                      )}
                     </div>
                   )}
                 </div>
                 <p className="post-card-excerpt">
-                  {isSearching ? (
-                    <HighlightedText 
-                      text={post.content.length > 150 ? `${post.content.substring(0, 150)}...` : post.content}
-                      highlight={searchQuery}
-                    />
+                  {post.isSecret && (!user || post.author?.id !== user.id) ? (
+                    <span className="post-card-secret-preview">
+                      🔒 비밀글입니다. 클릭하여 비밀번호를 입력해주세요.
+                    </span>
                   ) : (
-                    post.content.length > 150 ? `${post.content.substring(0, 150)}...` : post.content
+                    isSearching ? (
+                      <HighlightedText 
+                        text={post.content.length > 150 ? `${post.content.substring(0, 150)}...` : post.content}
+                        highlight={searchQuery}
+                      />
+                    ) : (
+                      post.content.length > 150 ? `${post.content.substring(0, 150)}...` : post.content
+                    )
                   )}
                 </p>
                 <div className="post-card-footer">
+                  <div className="post-card-stats">
+                    <span className="post-card-stat">
+                      <span className="post-card-stat-icon">💬</span>
+                      <span className="post-card-stat-text">댓글</span>
+                    </span>
+                    <span className="post-card-stat">
+                      <span className="post-card-stat-icon">👁️</span>
+                      <span className="post-card-stat-text">조회</span>
+                    </span>
+                  </div>
                   <span className="post-card-read-more">
-                    읽기 →
+                    {post.isSecret && (!user || post.author?.id !== user.id) ? (
+                      <>
+                        <span className="post-card-secret-icon">🔐</span>
+                        열기
+                      </>
+                    ) : (
+                      <>
+                        읽기 →
+                      </>
+                    )}
                   </span>
                 </div>
               </Link>
@@ -241,6 +281,7 @@ export default function Home() {
             <li>여러 단어로 검색하면 더 정확한 결과를 얻을 수 있습니다</li>
             <li>제목, 내용, 작성자명에서 모두 검색됩니다</li>
             <li>대소문자는 구분하지 않습니다</li>
+            <li>비밀글도 검색 결과에 포함되지만, 작성자가 아닌 경우 내용이 숨겨집니다</li>
           </ul>
         </div>
       )}
