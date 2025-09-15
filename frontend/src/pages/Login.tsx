@@ -14,7 +14,7 @@ export default function Login() {
   const { login: setAuth } = useAuth();
   const nav = useNavigate();
   const loc = useLocation() as { state?: { from?: string } };
-  const { showConfirm, ConfirmModalComponent } = useConfirmModal();
+  const { showAlert, ConfirmModalComponent } = useConfirmModal();
 
   // 클라이언트 사이드 유효성 검증
   const validateInput = () => {
@@ -91,39 +91,33 @@ export default function Login() {
         errorMessage = "서버에 문제가 발생했습니다. 잠시 후 다시 시도해주세요.";
       }
 
-      // 로그인 실패 모달에서 취소 버튼 제거
-      const result = new Promise<boolean>((resolve) => {
-        showConfirm({
-          title: "로그인 실패",
-          message: errorMessage,
-          confirmText: "확인",
-          type: "danger"
-        }).then(() => resolve(true));
+      // showAlert 함수 사용 (취소 버튼이 자동으로 제거됨)
+      await showAlert({
+        title: "로그인 실패",
+        message: errorMessage,
+        confirmText: "확인",
+        type: "danger"
       });
-      
-      await result;
     }
   });
 
   const handleForgotPassword = async () => {
-    // 비밀번호 찾기 모달에서 showCancel: false로 취소 버튼 제거
-    await showConfirm({
+    // showAlert 사용으로 더 간단해짐
+    await showAlert({
       title: "비밀번호 찾기",
       message: "비밀번호 찾기 기능은 준비 중입니다.\n\n관리자에게 문의하시거나 새로운 계정을 만들어 보세요.",
       confirmText: "확인",
-      type: "info",
-      showCancel: false
+      type: "info"
     });
   };
 
   const handleSocialLogin = async (provider: string) => {
-    // 소셜 로그인 모달에서 showCancel: false로 취소 버튼 제거
-    await showConfirm({
+    // showAlert 사용으로 더 간단해짐
+    await showAlert({
       title: "소셜 로그인",
       message: `${provider} 로그인은 준비 중입니다.\n\n곧 지원될 예정입니다.`,
       confirmText: "확인",
-      type: "info",
-      showCancel: false
+      type: "info"
     });
   };
 

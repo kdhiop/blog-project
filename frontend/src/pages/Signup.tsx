@@ -14,7 +14,7 @@ export function Signup() {
 
   const { login: setAuth } = useAuth();
   const nav = useNavigate();
-  const { showConfirm, ConfirmModalComponent } = useConfirmModal();
+  const { showConfirm, showAlert, ConfirmModalComponent } = useConfirmModal();
 
   // 클라이언트 사이드 유효성 검증 함수
   const validateInput = () => {
@@ -43,46 +43,45 @@ export function Signup() {
     return errors;
   };
 
+  // 실제 회원가입을 처리하는 함수
+  const performSignup = async () => {
+    console.log("회원가입 요청 데이터:", { 
+      username, 
+      passwordLength: password.length,
+      confirmPasswordMatch: password === confirmPassword 
+    });
+    
+    // 클라이언트 사이드 유효성 검증
+    const validationErrors = validateInput();
+    if (validationErrors.length > 0) {
+      throw new Error(validationErrors.join(", "));
+    }
+
+    // 1. 회원가입
+    const user = await register({ username, password });
+    console.log("회원가입 성공:", user);
+
+    // 2. 바로 로그인하여 토큰 받기
+    const loginResponse = await login({ username, password });
+    console.log("자동 로그인 성공:", loginResponse);
+
+    return { user, loginResponse };
+  };
+
   const mut = useMutation({
-    mutationFn: async () => {
-      console.log("회원가입 요청 데이터:", { 
-        username, 
-        passwordLength: password.length,
-        confirmPasswordMatch: password === confirmPassword 
-      });
-      
-      // 클라이언트 사이드 유효성 검증
-      const validationErrors = validateInput();
-      if (validationErrors.length > 0) {
-        throw new Error(validationErrors.join(", "));
-      }
-
-      // 1. 회원가입
-      const user = await register({ username, password });
-      console.log("회원가입 성공:", user);
-
-      // 2. 바로 로그인하여 토큰 받기
-      const loginResponse = await login({ username, password });
-      console.log("자동 로그인 성공:", loginResponse);
-
-      return { user, loginResponse };
-    },
+    mutationFn: performSignup,
     onSuccess: async (data) => {
       // JWT 토큰과 사용자 정보를 AuthContext에 저장
       setAuth(data.loginResponse.token, data.loginResponse.user);
       
-      // 성공 메시지 표시 - 취소 버튼 제거
-      const result = new Promise<boolean>((resolve) => {
-        // showConfirm을 Promise로 감싸서 항상 true 반환하도록 수정
-        showConfirm({
-          title: "회원가입 완료! 🎉",
-          message: `환영합니다, ${data.user.username}님!\n\n이제 자유롭게 글을 작성하고 다른 사용자들과 소통할 수 있습니다.`,
-          confirmText: "시작하기",
-          type: "info"
-        }).then(() => resolve(true));
+      // 성공 메시지 표시 - showAlert 사용
+      await showAlert({
+        title: "회원가입 완료! 🎉",
+        message: `환영합니다, ${data.user.username}님!\n\n이제 자유롭게 글을 작성하고 다른 사용자들과 소통할 수 있습니다.`,
+        confirmText: "시작하기",
+        type: "info"
       });
       
-      await result;
       nav("/");
     },
     onError: async (error: any) => {
@@ -111,19 +110,32 @@ export function Signup() {
         errorMessage = error.response.data.message;
       }
 
-      // 에러 메시지 표시 - 취소 버튼 제거
-      const result = new Promise<boolean>((resolve) => {
-        showConfirm({
-          title: "회원가입 실패",
-          message: errorMessage,
-          confirmText: "확인",
-          type: "danger"
-        }).then(() => resolve(true));
+      // 에러 메시지 표시 - showAlert 사용
+      await showAlert({
+        title: "회원가입 실패",
+        message: errorMessage,
+        confirmText: "확인",
+        type: "danger"
       });
-      
-      await result;
     }
   });
+
+  // 회원가입 확인 및 실행 함수
+  const handleSignup = async () => {
+    // 회원가입 확인 모달 표시
+    const confirmed = await showConfirm({
+      title: "회원가입 확인",
+      message: `사용자명: ${username}\n\n위 정보로 회원가입을 진행하시겠습니까?`,
+      confirmText: "가입하기",
+      cancelText: "취소",
+      type: "info"
+    });
+
+    // 확인을 눌렀을 경우에만 회원가입 진행
+    if (confirmed) {
+      mut.mutate();
+    }
+  };
 
   // 비밀번호 강도 체크
   const getPasswordStrength = () => {
@@ -142,13 +154,12 @@ export function Signup() {
   const passwordStrength = getPasswordStrength();
 
   const handleTermsClick = async () => {
-    // 이용약관 모달도 showCancel: false로 취소 버튼 제거
-    await showConfirm({
+    // 이용약관 모달 - showAlert 사용
+    await showAlert({
       title: "이용약관",
       message: "이용약관과 개인정보처리방침은 준비 중입니다.\n\n현재 테스트 버전으로 운영되고 있으며, 정식 서비스 시 제공될 예정입니다.",
       confirmText: "확인",
-      type: "info",
-      showCancel: false
+      type: "info"
     });
   };
 
@@ -165,7 +176,7 @@ export function Signup() {
           <form
             onSubmit={(e) => {
               e.preventDefault();
-              mut.mutate();
+              handleSignup(); // 확인 모달을 먼저 표시
             }}
             className="auth-page-form"
           >
