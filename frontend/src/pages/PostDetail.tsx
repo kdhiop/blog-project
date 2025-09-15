@@ -1,10 +1,11 @@
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { getPost, deletePost, updatePost } from "../api/posts";
+import { getPost, deletePost, updatePost, verifySecretPassword } from "../api/posts";
 import { addComment, getComments, deleteComment, updateComment } from "../api/comments";
 import { useAuth } from "../context/AuthContext";
 import { useState } from "react";
 import { useConfirmModal } from "../components/ConfirmModal";
+import SecretPasswordModal from "../components/SecretPasswordModal";
 
 export default function PostDetail() {
   const { id } = useParams();
@@ -28,21 +29,54 @@ export default function PostDetail() {
   const [isEditingPost, setIsEditingPost] = useState(false);
   const [editTitle, setEditTitle] = useState("");
   const [editContent, setEditContent] = useState("");
+  const [editIsSecret, setEditIsSecret] = useState(false);
+  const [editSecretPassword, setEditSecretPassword] = useState("");
+  const [showEditSecretPassword, setShowEditSecretPassword] = useState(false);
   const [editingCommentId, setEditingCommentId] = useState<number | null>(null);
   const [editCommentText, setEditCommentText] = useState("");
+
+  // 비밀글 관련 상태
+  const [showSecretModal, setShowSecretModal] = useState(false);
+  const [secretPasswordError, setSecretPasswordError] = useState("");
+  const [verifyingPassword, setVerifyingPassword] = useState(false);
+
+  // 비밀글 비밀번호 확인
+  const verifySecretMutation = useMutation({
+    mutationFn: (password: string) => verifySecretPassword(postId, password),
+    onSuccess: (verifiedPost) => {
+      qc.setQueryData(["post", postId], verifiedPost);
+      setShowSecretModal(false);
+      setSecretPasswordError("");
+    },
+    onError: (error: any) => {
+      console.error("비밀글 비밀번호 확인 실패:", error);
+      if (error.response?.status === 403 || error.message?.includes("비밀번호")) {
+        setSecretPasswordError("비밀번호가 일치하지 않습니다.");
+      } else {
+        setSecretPasswordError("비밀번호 확인 중 오류가 발생했습니다.");
+      }
+    }
+  });
 
   // 게시글 수정 모드 진입
   const startEditPost = () => {
     if (post) {
       setEditTitle(post.title);
       setEditContent(post.content);
+      setEditIsSecret(Boolean(post.isSecret));
+      setEditSecretPassword("");
       setIsEditingPost(true);
     }
   };
 
   // 게시글 수정 취소
   const cancelEditPost = async () => {
-    if (editTitle !== post?.title || editContent !== post?.content) {
+    const hasChanges = editTitle !== post?.title || 
+                      editContent !== post?.content || 
+                      editIsSecret !== Boolean(post?.isSecret) ||
+                      editSecretPassword.trim() !== "";
+
+    if (hasChanges) {
       const confirmed = await showConfirm({
         title: "수정 취소",
         message: "수정된 내용이 있습니다.\n정말로 취소하시겠습니까?",
@@ -57,6 +91,38 @@ export default function PostDetail() {
     setIsEditingPost(false);
     setEditTitle("");
     setEditContent("");
+    setEditIsSecret(false);
+    setEditSecretPassword("");
+  };
+
+  // 비밀글 설정 토글 (수정 시)
+  const handleEditSecretToggle = async (checked: boolean) => {
+    if (checked && !editIsSecret) {
+      const confirmed = await showConfirm({
+        title: "비밀글 설정",
+        message: "이 게시글을 비밀글로 변경하시겠습니까?\n\n비밀글은 작성자와 비밀번호를 아는 사용자만 볼 수 있습니다.",
+        confirmText: "비밀글로 변경",
+        cancelText: "취소",
+        type: "info"
+      });
+      
+      if (confirmed) {
+        setEditIsSecret(true);
+      }
+    } else if (!checked && editIsSecret) {
+      const confirmed = await showConfirm({
+        title: "비밀글 해제",
+        message: "비밀글 설정을 해제하시겠습니까?\n\n게시글이 모든 사용자에게 공개됩니다.",
+        confirmText: "공개글로 변경",
+        cancelText: "취소",
+        type: "warning"
+      });
+      
+      if (confirmed) {
+        setEditIsSecret(false);
+        setEditSecretPassword("");
+      }
+    }
   };
 
   // 댓글 수정 모드 진입
@@ -98,12 +164,19 @@ export default function PostDetail() {
 
   // 게시글 수정
   const updatePostMut = useMutation({
-    mutationFn: () => updatePost(postId, { title: editTitle, content: editContent }),
+    mutationFn: () => updatePost(postId, { 
+      title: editTitle, 
+      content: editContent,
+      isSecret: editIsSecret,
+      secretPassword: editIsSecret && editSecretPassword.trim() ? editSecretPassword : undefined
+    }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["post", postId] });
       setIsEditingPost(false);
       setEditTitle("");
       setEditContent("");
+      setEditIsSecret(false);
+      setEditSecretPassword("");
     },
     onError: async (error) => {
       console.error("게시글 수정 실패:", error);
@@ -111,7 +184,8 @@ export default function PostDetail() {
         title: "수정 실패",
         message: "게시글 수정에 실패했습니다.\n작성자만 수정할 수 있습니다.",
         confirmText: "확인",
-        type: "danger"
+        type: "danger",
+        showCancel: false
       });
     },
   });
@@ -129,7 +203,8 @@ export default function PostDetail() {
         title: "삭제 실패",
         message: "게시글 삭제에 실패했습니다.\n작성자만 삭제할 수 있습니다.",
         confirmText: "확인",
-        type: "danger"
+        type: "danger",
+        showCancel: false
       });
     },
   });
@@ -149,7 +224,8 @@ export default function PostDetail() {
         title: "수정 실패",
         message: "댓글 수정에 실패했습니다.\n작성자만 수정할 수 있습니다.",
         confirmText: "확인",
-        type: "danger"
+        type: "danger",
+        showCancel: false
       });
     },
   });
@@ -166,7 +242,8 @@ export default function PostDetail() {
         title: "삭제 실패",
         message: "댓글 삭제에 실패했습니다.\n작성자만 삭제할 수 있습니다.",
         confirmText: "확인",
-        type: "danger"
+        type: "danger",
+        showCancel: false
       });
     },
   });
@@ -178,7 +255,8 @@ export default function PostDetail() {
         title: "로그인 필요",
         message: "로그인이 필요한 기능입니다.",
         confirmText: "확인",
-        type: "info"
+        type: "info",
+        showCancel: false
       });
       return;
     }
@@ -188,13 +266,15 @@ export default function PostDetail() {
         title: "권한 없음",
         message: "작성자만 삭제할 수 있습니다.",
         confirmText: "확인",
-        type: "warning"
+        type: "warning",
+        showCancel: false
       });
       return;
     }
     
+    const postType = post.isSecret ? "비밀글" : "게시글";
     const confirmed = await showConfirm({
-      title: "게시글 삭제",
+      title: `${postType} 삭제`,
       message: `정말로 "${post.title}"을(를) 삭제하시겠습니까?\n\n이 작업은 되돌릴 수 없으며, 모든 댓글도 함께 삭제됩니다.`,
       confirmText: "삭제하기",
       cancelText: "취소",
@@ -213,7 +293,8 @@ export default function PostDetail() {
         title: "로그인 필요",
         message: "로그인이 필요한 기능입니다.",
         confirmText: "확인",
-        type: "info"
+        type: "info",
+        showCancel: false
       });
       return;
     }
@@ -223,7 +304,8 @@ export default function PostDetail() {
         title: "권한 없음",
         message: "작성자만 삭제할 수 있습니다.",
         confirmText: "확인",
-        type: "warning"
+        type: "warning",
+        showCancel: false
       });
       return;
     }
@@ -243,6 +325,19 @@ export default function PostDetail() {
     if (confirmed) {
       deleteCommentMut.mutate(commentId);
     }
+  };
+
+  // 비밀글 비밀번호 입력 모달 핸들러
+  const handleSecretPasswordSubmit = (password: string) => {
+    setVerifyingPassword(true);
+    setSecretPasswordError("");
+    verifySecretMutation.mutate(password);
+  };
+
+  const handleSecretPasswordCancel = () => {
+    setShowSecretModal(false);
+    setSecretPasswordError("");
+    navigate("/"); // 비밀글 접근 취소 시 홈으로 이동
   };
 
   if (postLoading) {
@@ -269,6 +364,13 @@ export default function PostDetail() {
     );
   }
 
+  // 비밀글이고 접근 권한이 없는 경우
+  if (post.isSecret && !post.hasAccess) {
+    if (!showSecretModal) {
+      setShowSecretModal(true);
+    }
+  }
+
   return (
     <div className="post-detail-container">
       <div className="post-detail-wrapper">
@@ -277,7 +379,16 @@ export default function PostDetail() {
           {!isEditingPost ? (
             <>
               <div className="post-detail-header">
-                <h1 className="post-detail-title">{post.title}</h1>
+                <div className="post-title-container">
+                  {post.isSecret && (
+                    <div className="post-secret-badge">
+                      <span>🔐</span>
+                      <span>비밀글</span>
+                    </div>
+                  )}
+                  <h1 className="post-detail-title">{post.title}</h1>
+                </div>
+                
                 <div className="post-detail-meta">
                   {post.author && (
                     <div className="post-detail-author">
@@ -327,14 +438,14 @@ export default function PostDetail() {
             // 게시글 수정 모드
             <div className="post-edit-mode">
               <div className="post-edit-header">
-                <h2>게시글 수정</h2>
+                <h2>{editIsSecret ? "비밀글 수정" : "게시글 수정"}</h2>
                 <div className="post-edit-actions">
                   <button onClick={cancelEditPost} className="ui-btn ui-btn-secondary">
                     취소
                   </button>
                   <button
                     onClick={() => updatePostMut.mutate()}
-                    disabled={updatePostMut.isPending || !editTitle.trim() || !editContent.trim()}
+                    disabled={updatePostMut.isPending || !editTitle.trim() || !editContent.trim() || (editIsSecret && !editSecretPassword.trim() && !post?.isSecret)}
                     className="ui-btn ui-btn-primary"
                   >
                     {updatePostMut.isPending ? (
@@ -351,6 +462,7 @@ export default function PostDetail() {
                   </button>
                 </div>
               </div>
+              
               <div className="post-edit-form">
                 <div className="form-group">
                   <label htmlFor="edit-title" className="form-label">
@@ -367,6 +479,64 @@ export default function PostDetail() {
                     maxLength={100}
                   />
                 </div>
+
+                {/* 비밀글 설정 */}
+                <div className="form-group">
+                  <div className="secret-post-toggle">
+                    <label className="secret-toggle-label">
+                      <input
+                        type="checkbox"
+                        checked={editIsSecret}
+                        onChange={(e) => handleEditSecretToggle(e.target.checked)}
+                        disabled={updatePostMut.isPending}
+                        className="secret-toggle-input"
+                      />
+                      <div className="secret-toggle-switch">
+                        <div className="secret-toggle-slider"></div>
+                      </div>
+                      <span className="secret-toggle-text">
+                        <span className="secret-toggle-icon">{editIsSecret ? "🔐" : "🔓"}</span>
+                        <span>비밀글로 설정</span>
+                      </span>
+                    </label>
+                  </div>
+                </div>
+
+                {/* 비밀글 비밀번호 */}
+                {editIsSecret && (
+                  <div className="form-group">
+                    <label htmlFor="edit-secret-password" className="form-label">
+                      <span className="form-label-icon">🔑</span>
+                      비밀글 비밀번호
+                      {!post?.isSecret && <span className="form-required">*</span>}
+                    </label>
+                    <div className="secret-password-input-container">
+                      <input
+                        id="edit-secret-password"
+                        type={showEditSecretPassword ? "text" : "password"}
+                        className="form-input"
+                        placeholder={post?.isSecret ? "새 비밀번호 (공백 시 기존 비밀번호 유지)" : "비밀글을 보기 위한 비밀번호를 입력하세요"}
+                        value={editSecretPassword}
+                        onChange={(e) => setEditSecretPassword(e.target.value)}
+                        maxLength={50}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowEditSecretPassword(!showEditSecretPassword)}
+                        className="secret-password-toggle-btn"
+                        title={showEditSecretPassword ? "비밀번호 숨기기" : "비밀번호 보기"}
+                      >
+                        {showEditSecretPassword ? "👁️" : "👁️‍🗨️"}
+                      </button>
+                    </div>
+                    {post?.isSecret && (
+                      <div className="form-hint">
+                        기존 비밀글의 비밀번호를 변경하려면 새 비밀번호를 입력하세요.
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 <div className="form-group">
                   <label htmlFor="edit-content" className="form-label">
                     <span className="form-label-icon">📄</span>
@@ -407,7 +577,6 @@ export default function PostDetail() {
                 onClick={async () => {
                   try {
                     await navigator.clipboard.writeText(window.location.href);
-                    // 성공 피드백 표시 (토스트 메시지 등)
                   } catch (err) {
                     console.error('링크 복사 실패:', err);
                   }
@@ -604,6 +773,16 @@ export default function PostDetail() {
           )}
         </section>
       </div>
+      
+      {/* 비밀글 비밀번호 입력 모달 */}
+      <SecretPasswordModal
+        isOpen={showSecretModal}
+        title={post?.title || ""}
+        onConfirm={handleSecretPasswordSubmit}
+        onCancel={handleSecretPasswordCancel}
+        isLoading={verifySecretMutation.isPending}
+        error={secretPasswordError}
+      />
       
       {/* 커스텀 모달 컴포넌트 */}
       <ConfirmModalComponent />

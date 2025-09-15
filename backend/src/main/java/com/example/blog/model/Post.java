@@ -11,7 +11,8 @@ import java.util.List;
 @Entity
 @Table(name = "posts", indexes = {
     @Index(name = "idx_post_author_id", columnList = "author_id"),
-    @Index(name = "idx_post_created_at", columnList = "created_at")
+    @Index(name = "idx_post_created_at", columnList = "created_at"),
+    @Index(name = "idx_post_is_secret", columnList = "is_secret")
 })
 public class Post {
     @Id 
@@ -30,6 +31,13 @@ public class Post {
 
     @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<Comment> comments = new ArrayList<>();
+
+    // 비밀글 관련 필드 추가
+    @Column(name = "is_secret", nullable = false)
+    private Boolean isSecret = false;
+
+    @Column(name = "secret_password", length = 255)
+    private String secretPassword; // 암호화된 비밀번호 저장
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
@@ -67,6 +75,12 @@ public class Post {
     public List<Comment> getComments() { return comments; }
     public void setComments(List<Comment> comments) { this.comments = comments; }
 
+    public Boolean getIsSecret() { return isSecret; }
+    public void setIsSecret(Boolean isSecret) { this.isSecret = isSecret; }
+
+    public String getSecretPassword() { return secretPassword; }
+    public void setSecretPassword(String secretPassword) { this.secretPassword = secretPassword; }
+
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
 
@@ -76,9 +90,15 @@ public class Post {
     public Long getVersion() { return version; }
     public void setVersion(Long version) { this.version = version; }
 
+    // 편의 메소드
+    public boolean isSecret() {
+        return Boolean.TRUE.equals(isSecret);
+    }
+
     @Override
     public String toString() {
         return "Post{id=" + id + ", title='" + title + "', author=" + 
-               (author != null ? author.getUsername() : "null") + "}";
+               (author != null ? author.getUsername() : "null") + 
+               ", isSecret=" + isSecret + "}";
     }
 }

@@ -12,22 +12,46 @@ import java.util.Optional;
 
 public interface PostRepository extends JpaRepository<Post, Long> {
     
-    // *** 새로 추가된 메소드 - Lazy Loading 문제 해결용 ***
-    // 전체 조회 시 Author 정보도 함께 가져오기 (N+1 문제 해결)
+    // *** 공개 게시글만 조회하는 메소드들 (비밀글 제외) ***
+    
+    // 공개 게시글만 전체 조회 (Author 정보 포함)
+    @Query("SELECT p FROM Post p LEFT JOIN FETCH p.author WHERE p.isSecret = false ORDER BY p.id DESC")
+    List<Post> findAllPublicWithAuthor();
+    
+    // 전체 조회 (비밀글 포함, Author 정보 포함) - 관리자용
     @Query("SELECT p FROM Post p LEFT JOIN FETCH p.author ORDER BY p.id DESC")
     List<Post> findAllWithAuthor();
     
-    // 페이징 지원 (최신순)
-    @Query("SELECT p FROM Post p ORDER BY p.id DESC")
-    Page<Post> findAllOrderByIdDesc(Pageable pageable);
+    // 공개 게시글만 페이징 조회
+    @Query("SELECT p FROM Post p WHERE p.isSecret = false ORDER BY p.id DESC")
+    Page<Post> findAllPublicOrderByIdDesc(Pageable pageable);
     
-    // 전체 조회 (최신순) - 기존 메소드 유지 (하위 호환성)
+    // 전체 조회 (기존) - 하위 호환성 유지
     @Query("SELECT p FROM Post p ORDER BY p.id DESC")
     List<Post> findAllOrderByIdDesc();
     
-    // *** 검색 기능 추가 - 다양한 검색 옵션 ***
+    // *** 검색 기능 - 공개 게시글만 검색 ***
     
-    // 제목 또는 내용으로 검색 (기본)
+    // 공개 게시글에서 제목 또는 내용으로 검색
+    @Query("SELECT p FROM Post p LEFT JOIN FETCH p.author " +
+           "WHERE p.isSecret = false AND (" +
+           "LOWER(p.title) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
+           "OR LOWER(p.content) LIKE LOWER(CONCAT('%', :keyword, '%'))) " +
+           "ORDER BY p.id DESC")
+    List<Post> findByKeywordPublicWithAuthor(@Param("keyword") String keyword);
+    
+    // 공개 게시글에서 전체 텍스트 검색 (제목, 내용, 작성자명)
+    @Query("SELECT p FROM Post p LEFT JOIN FETCH p.author a " +
+           "WHERE p.isSecret = false AND (" +
+           "LOWER(p.title) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
+           "OR LOWER(p.content) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
+           "OR LOWER(a.username) LIKE LOWER(CONCAT('%', :keyword, '%'))) " +
+           "ORDER BY p.id DESC")
+    List<Post> findByFullTextSearchPublicWithAuthor(@Param("keyword") String keyword);
+    
+    // *** 기존 검색 메소드들 (전체 게시글 대상) ***
+    
+    // 제목 또는 내용으로 검색 (비밀글 포함)
     @Query("SELECT p FROM Post p LEFT JOIN FETCH p.author " +
            "WHERE LOWER(p.title) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
            "OR LOWER(p.content) LIKE LOWER(CONCAT('%', :keyword, '%')) " +

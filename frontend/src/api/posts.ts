@@ -5,6 +5,8 @@ export interface Post {
   title: string;
   content: string;
   author?: { id: number; username: string };
+  isSecret?: boolean;
+  hasAccess?: boolean;
 }
 
 // 백엔드 응답 형식
@@ -14,6 +16,8 @@ interface BackendPostResponse {
   content: string;
   authorId?: number;
   authorUsername?: string;
+  isSecret?: boolean;
+  hasAccess?: boolean;
 }
 
 // 백엔드 응답을 프론트엔드 형식으로 변환하는 함수
@@ -21,6 +25,8 @@ const mapBackendPost = (post: BackendPostResponse): Post => ({
   id: post.id,
   title: post.title,
   content: post.content,
+  isSecret: post.isSecret,
+  hasAccess: post.hasAccess,
   author: post.authorId && post.authorUsername ? {
     id: post.authorId,
     username: post.authorUsername
@@ -49,16 +55,34 @@ export const getPost = async (id: number): Promise<Post> => {
   return mapBackendPost(res.data);
 };
 
-export const createPost = async (payload: { title: string; content: string }): Promise<Post> => {
+export const createPost = async (payload: { 
+  title: string; 
+  content: string; 
+  isSecret?: boolean; 
+  secretPassword?: string 
+}): Promise<Post> => {
   const res = await client.post<BackendPostResponse>("/posts", payload);
   return mapBackendPost(res.data);
 };
 
-export const updatePost = async (id: number, payload: { title: string; content: string }): Promise<Post> => {
+export const updatePost = async (id: number, payload: { 
+  title: string; 
+  content: string; 
+  isSecret?: boolean; 
+  secretPassword?: string 
+}): Promise<Post> => {
   const res = await client.put<BackendPostResponse>(`/posts/${id}`, payload);
   return mapBackendPost(res.data);
 };
 
 export const deletePost = async (id: number): Promise<void> => {
   await client.delete(`/posts/${id}`);
+};
+
+// 비밀글 비밀번호 확인
+export const verifySecretPassword = async (id: number, password: string): Promise<Post> => {
+  const res = await client.post<BackendPostResponse>(`/posts/${id}/verify-password`, {
+    password
+  });
+  return mapBackendPost(res.data);
 };

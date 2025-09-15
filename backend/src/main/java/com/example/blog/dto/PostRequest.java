@@ -12,6 +12,12 @@ public class PostRequest {
 	@Size(min = 1, max = 2000, message = "내용은 1-2000자 사이여야 합니다")
 	private String content;
 
+	// 비밀글 관련 필드 추가
+	private Boolean isSecret = false;
+
+	@Size(max = 50, message = "비밀번호는 50자를 초과할 수 없습니다")
+	private String secretPassword;
+
 	public PostRequest() {
 	}
 
@@ -29,5 +35,21 @@ public class PostRequest {
 
 	public void setContent(String content) {
 		this.content = content;
+	}
+
+	public Boolean getIsSecret() {
+		return isSecret;
+	}
+
+	public void setIsSecret(Boolean isSecret) {
+		this.isSecret = isSecret;
+	}
+
+	public String getSecretPassword() {
+		return secretPassword;
+	}
+
+	public void setSecretPassword(String secretPassword) {
+		this.secretPassword = secretPassword;
 	}
 }

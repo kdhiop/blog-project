@@ -13,13 +13,21 @@ export default function NewPost() {
 
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
+  const [isSecret, setIsSecret] = useState(false);
+  const [secretPassword, setSecretPassword] = useState("");
+  const [showSecretPassword, setShowSecretPassword] = useState(false);
   const [isPreview, setIsPreview] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   // 변경사항 감지
   useEffect(() => {
-    setHasUnsavedChanges(title.trim().length > 0 || content.trim().length > 0);
-  }, [title, content]);
+    setHasUnsavedChanges(
+      title.trim().length > 0 || 
+      content.trim().length > 0 || 
+      isSecret || 
+      secretPassword.trim().length > 0
+    );
+  }, [title, content, isSecret, secretPassword]);
 
   // 페이지 벗어날 때 경고 (브라우저 기본)
   useEffect(() => {
@@ -48,10 +56,15 @@ export default function NewPost() {
       if (content.trim().length < 10) {
         throw new Error("내용은 10자 이상 입력해주세요.");
       }
+      if (isSecret && !secretPassword.trim()) {
+        throw new Error("비밀글에는 비밀번호가 필요합니다.");
+      }
       
       return createPost({ 
         title: title.trim(), 
-        content: content.trim() 
+        content: content.trim(),
+        isSecret,
+        secretPassword: isSecret ? secretPassword.trim() : undefined
       });
     },
     onSuccess: (newPost) => {
@@ -65,10 +78,8 @@ export default function NewPost() {
       let errorMessage = "게시글 작성에 실패했습니다.";
       
       if (error.message && !error.response) {
-        // 클라이언트 사이드 에러
         errorMessage = error.message;
       } else if (error.response?.data?.message) {
-        // 서버 에러
         errorMessage = error.response.data.message;
       } else if (error.response?.status === 401) {
         errorMessage = "로그인이 필요합니다.";
@@ -80,7 +91,8 @@ export default function NewPost() {
         title: "작성 실패",
         message: errorMessage,
         confirmText: "확인",
-        type: "danger"
+        type: "danger",
+        showCancel: false
       });
     }
   });
@@ -101,6 +113,37 @@ export default function NewPost() {
     nav("/");
   };
 
+  const handleSecretToggle = async (checked: boolean) => {
+    if (checked && !isSecret) {
+      // 비밀글로 설정할 때 안내 메시지
+      const confirmed = await showConfirm({
+        title: "비밀글 설정",
+        message: "이 게시글을 비밀글로 설정하시겠습니까?\n\n비밀글은 작성자와 비밀번호를 아는 사용자만 볼 수 있습니다.",
+        confirmText: "비밀글로 설정",
+        cancelText: "취소",
+        type: "info"
+      });
+      
+      if (confirmed) {
+        setIsSecret(true);
+      }
+    } else if (!checked && isSecret) {
+      // 비밀글 해제할 때
+      const confirmed = await showConfirm({
+        title: "비밀글 해제",
+        message: "비밀글 설정을 해제하시겠습니까?\n\n게시글이 모든 사용자에게 공개됩니다.",
+        confirmText: "공개글로 변경",
+        cancelText: "취소",
+        type: "warning"
+      });
+      
+      if (confirmed) {
+        setIsSecret(false);
+        setSecretPassword("");
+      }
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -110,7 +153,8 @@ export default function NewPost() {
         title: "입력 확인",
         message: "제목을 입력해주세요.",
         confirmText: "확인",
-        type: "warning"
+        type: "warning",
+        showCancel: false
       });
       return;
     }
@@ -120,7 +164,8 @@ export default function NewPost() {
         title: "입력 확인",
         message: "내용을 입력해주세요.",
         confirmText: "확인",
-        type: "warning"
+        type: "warning",
+        showCancel: false
       });
       return;
     }
@@ -130,7 +175,8 @@ export default function NewPost() {
         title: "입력 확인",
         message: "제목은 2자 이상 입력해주세요.",
         confirmText: "확인",
-        type: "warning"
+        type: "warning",
+        showCancel: false
       });
       return;
     }
@@ -140,15 +186,34 @@ export default function NewPost() {
         title: "입력 확인",
         message: "내용은 10자 이상 입력해주세요.",
         confirmText: "확인",
-        type: "warning"
+        type: "warning",
+        showCancel: false
+      });
+      return;
+    }
+
+    if (isSecret && !secretPassword.trim()) {
+      await showConfirm({
+        title: "비밀번호 필요",
+        message: "비밀글에는 비밀번호가 필요합니다.\n비밀번호를 입력해주세요.",
+        confirmText: "확인",
+        type: "warning",
+        showCancel: false
       });
       return;
     }
 
     // 발행 확인
+    const postType = isSecret ? "비밀글" : "게시글";
+    let confirmMessage = `"${title.trim()}"을(를) ${postType}로 발행하시겠습니까?\n\n발행 후에도 수정할 수 있습니다.`;
+    
+    if (isSecret) {
+      confirmMessage += `\n\n🔐 이 게시글은 비밀번호를 아는 사용자만 볼 수 있습니다.`;
+    }
+
     const confirmed = await showConfirm({
-      title: "게시글 발행",
-      message: `"${title.trim()}"을(를) 발행하시겠습니까?\n\n발행 후에도 수정할 수 있습니다.`,
+      title: `${postType} 발행`,
+      message: confirmMessage,
       confirmText: "발행하기",
       cancelText: "취소",
       type: "info"
@@ -165,7 +230,8 @@ export default function NewPost() {
         title: "미리보기 불가",
         message: "제목과 내용을 입력한 후 미리보기를 사용할 수 있습니다.",
         confirmText: "확인",
-        type: "info"
+        type: "info",
+        showCancel: false
       });
       return;
     }
@@ -201,10 +267,17 @@ export default function NewPost() {
           <div className="new-post-header">
             <div className="new-post-header-content">
               <div className="new-post-header-title">
-                <div className="new-post-header-icon">✍️</div>
+                <div className="new-post-header-icon">
+                  {isSecret ? "🔐" : "✍️"}
+                </div>
                 <div className="new-post-header-text">
-                  <h1>새 글 작성</h1>
-                  <p>{hasUnsavedChanges ? "작성 중..." : "당신의 이야기를 공유해보세요"}</p>
+                  <h1>{isSecret ? "비밀글 작성" : "새 글 작성"}</h1>
+                  <p>
+                    {hasUnsavedChanges 
+                      ? (isSecret ? "비밀글 작성 중..." : "작성 중...") 
+                      : "당신의 이야기를 공유해보세요"
+                    }
+                  </p>
                 </div>
               </div>
               <button
@@ -244,6 +317,71 @@ export default function NewPost() {
                     </div>
                   )}
                 </div>
+
+                {/* 비밀글 설정 */}
+                <div className="form-group">
+                  <div className="secret-post-toggle">
+                    <label className="secret-toggle-label">
+                      <input
+                        type="checkbox"
+                        checked={isSecret}
+                        onChange={(e) => handleSecretToggle(e.target.checked)}
+                        disabled={mut.isPending}
+                        className="secret-toggle-input"
+                      />
+                      <div className="secret-toggle-switch">
+                        <div className="secret-toggle-slider"></div>
+                      </div>
+                      <span className="secret-toggle-text">
+                        <span className="secret-toggle-icon">{isSecret ? "🔐" : "🔓"}</span>
+                        <span>비밀글로 설정</span>
+                      </span>
+                    </label>
+                    {isSecret && (
+                      <div className="secret-toggle-hint">
+                        비밀번호를 아는 사용자만 이 게시글을 볼 수 있습니다
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* 비밀글 비밀번호 */}
+                {isSecret && (
+                  <div className="form-group">
+                    <label htmlFor="secretPassword" className="form-label">
+                      <span className="form-label-icon">🔑</span>
+                      비밀글 비밀번호
+                      <span className="form-required">*</span>
+                    </label>
+                    <div className="secret-password-input-container">
+                      <input
+                        id="secretPassword"
+                        type={showSecretPassword ? "text" : "password"}
+                        className="form-input"
+                        placeholder="비밀글을 보기 위한 비밀번호를 입력하세요"
+                        value={secretPassword}
+                        onChange={(e) => setSecretPassword(e.target.value)}
+                        required={isSecret}
+                        maxLength={50}
+                        disabled={mut.isPending}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowSecretPassword(!showSecretPassword)}
+                        className="secret-password-toggle-btn"
+                        disabled={mut.isPending}
+                        title={showSecretPassword ? "비밀번호 숨기기" : "비밀번호 보기"}
+                      >
+                        {showSecretPassword ? "👁️" : "👁️‍🗨️"}
+                      </button>
+                    </div>
+                    {secretPassword.length > 0 && (
+                      <div className={`form-char-count ${secretPassword.length > 45 ? 'form-char-count--warning' : ''} ${secretPassword.length >= 50 ? 'form-char-count--error' : ''}`}>
+                        {secretPassword.length} / 50
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 <div className="form-group">
                   <label htmlFor="content" className="form-label">
@@ -304,6 +442,11 @@ export default function NewPost() {
                     <span>
                       {hasUnsavedChanges ? "변경사항이 있습니다" : "변경사항 없음"}
                     </span>
+                    {isSecret && (
+                      <span className="secret-post-indicator">
+                        🔐 비밀글
+                      </span>
+                    )}
                   </div>
 
                   <div className="new-post-form-actions">
@@ -319,7 +462,7 @@ export default function NewPost() {
                     <button
                       type="submit"
                       className="ui-btn ui-btn-primary"
-                      disabled={mut.isPending || !title.trim() || !content.trim()}
+                      disabled={mut.isPending || !title.trim() || !content.trim() || (isSecret && !secretPassword.trim())}
                     >
                       {mut.isPending ? (
                         <>
@@ -328,7 +471,7 @@ export default function NewPost() {
                         </>
                       ) : (
                         <>
-                          발행하기
+                          {isSecret ? "비밀글 발행" : "발행하기"}
                           <span>🚀</span>
                         </>
                       )}
@@ -351,6 +494,13 @@ export default function NewPost() {
                 </div>
                 
                 <div className="new-post-preview-container">
+                  {isSecret && (
+                    <div className="post-preview-secret-badge">
+                      <span>🔐</span>
+                      <span>비밀글</span>
+                    </div>
+                  )}
+                  
                   <div className="new-post-preview-title">
                     {title || "제목이 입력되지 않았습니다"}
                   </div>

@@ -3394,3 +3394,345 @@ mark {
   scrollbar-width: thin;
   scrollbar-color: var(--text-light) var(--bg-tertiary);
 }
+
+/* 비밀글 카드 스타일 */
+.post-card--secret {
+  border: 2px solid var(--warning-color, #f59e0b);
+  background: linear-gradient(135deg, 
+    rgba(245, 158, 11, 0.05) 0%, 
+    rgba(245, 158, 11, 0.02) 100%);
+}
+
+.post-card--secret:hover {
+  border-color: var(--warning-color, #f59e0b);
+  box-shadow: 0 8px 32px rgba(245, 158, 11, 0.15);
+}
+
+/* 비밀글 배지 */
+.post-card-secret-badge,
+.post-secret-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.5rem;
+  background: var(--warning-color, #f59e0b);
+  color: white;
+  border-radius: 0.375rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.post-card-secret-badge span:first-child,
+.post-secret-badge span:first-child {
+  font-size: 0.875rem;
+}
+
+/* 비밀글 미리보기 텍스트 */
+.post-card-secret-preview {
+  color: var(--text-muted, #64748b);
+  font-style: italic;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* 게시글 제목 컨테이너 */
+.post-card-title-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.post-title-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+/* 비밀글 토글 스위치 */
+.secret-post-toggle {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.secret-toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  cursor: pointer;
+  user-select: none;
+}
+
+.secret-toggle-input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.secret-toggle-switch {
+  position: relative;
+  width: 3rem;
+  height: 1.5rem;
+  background: var(--border-color, #e5e7eb);
+  border-radius: 0.75rem;
+  transition: all 0.3s ease;
+}
+
+.secret-toggle-switch:hover {
+  background: var(--border-hover, #d1d5db);
+}
+
+.secret-toggle-input:checked + .secret-toggle-switch {
+  background: var(--warning-color, #f59e0b);
+}
+
+.secret-toggle-slider {
+  position: absolute;
+  top: 0.125rem;
+  left: 0.125rem;
+  width: 1.25rem;
+  height: 1.25rem;
+  background: white;
+  border-radius: 50%;
+  transition: transform 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.secret-toggle-input:checked + .secret-toggle-switch .secret-toggle-slider {
+  transform: translateX(1.5rem);
+}
+
+.secret-toggle-text {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 500;
+  color: var(--text-primary, #1f2937);
+}
+
+.secret-toggle-icon {
+  font-size: 1.125rem;
+}
+
+.secret-toggle-hint {
+  font-size: 0.875rem;
+  color: var(--text-muted, #64748b);
+  margin-left: 3.75rem; /* 토글 스위치와 정렬 */
+}
+
+/* 비밀번호 입력 컨테이너 */
+.secret-password-input-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.secret-password-toggle-btn {
+  position: absolute;
+  right: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1rem;
+  color: var(--text-muted, #64748b);
+  padding: 0.25rem;
+  border-radius: 0.25rem;
+  transition: all 0.2s ease;
+}
+
+.secret-password-toggle-btn:hover {
+  background: var(--bg-secondary, #f8fafc);
+  color: var(--text-primary, #1f2937);
+}
+
+.secret-password-toggle-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* 비밀글 인디케이터 */
+.secret-post-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.5rem;
+  background: rgba(245, 158, 11, 0.1);
+  color: var(--warning-color, #f59e0b);
+  border: 1px solid var(--warning-color, #f59e0b);
+  border-radius: 0.375rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+/* 비밀번호 모달 스타일 */
+.secret-password-form {
+  margin-top: 1rem;
+}
+
+.secret-password-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.secret-password-input {
+  width: 100%;
+  padding: 0.75rem 3rem 0.75rem 0.75rem;
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: 0.5rem;
+  font-size: 1rem;
+  transition: all 0.2s ease;
+  background: var(--bg-primary, white);
+}
+
+.secret-password-input:focus {
+  outline: none;
+  border-color: var(--primary-color, #3b82f6);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.secret-password-toggle {
+  position: absolute;
+  right: 0.75rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1.125rem;
+  color: var(--text-muted, #64748b);
+  padding: 0.25rem;
+  border-radius: 0.25rem;
+  transition: all 0.2s ease;
+}
+
+.secret-password-toggle:hover {
+  background: var(--bg-secondary, #f8fafc);
+  color: var(--text-primary, #1f2937);
+}
+
+.secret-password-error {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  border-radius: 0.5rem;
+  color: var(--danger-color, #ef4444);
+  font-size: 0.875rem;
+  margin-top: 0.5rem;
+}
+
+/* 경고 버튼 스타일 */
+.confirm-modal-btn--warning {
+  background: var(--warning-color, #f59e0b);
+  color: white;
+}
+
+.confirm-modal-btn--warning:hover:not(:disabled) {
+  background: #d97706;
+}
+
+/* 게시글 미리보기 비밀글 배지 */
+.post-preview-secret-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.375rem 0.75rem;
+  background: var(--warning-color, #f59e0b);
+  color: white;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+}
+
+/* 폼 힌트 텍스트 */
+.form-hint {
+  font-size: 0.875rem;
+  color: var(--text-muted, #64748b);
+  margin-top: 0.5rem;
+}
+
+/* 검색 팁 업데이트 */
+.search-tips ul li:last-child {
+  color: var(--warning-color, #f59e0b);
+  font-weight: 500;
+}
+
+/* 반응형 스타일 */
+@media (max-width: 768px) {
+  .secret-toggle-hint {
+    margin-left: 0;
+    margin-top: 0.5rem;
+  }
+  
+  .secret-toggle-label {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  
+  .secret-toggle-switch {
+    width: 2.5rem;
+    height: 1.25rem;
+  }
+  
+  .secret-toggle-slider {
+    width: 1rem;
+    height: 1rem;
+  }
+  
+  .secret-toggle-input:checked + .secret-toggle-switch .secret-toggle-slider {
+    transform: translateX(1.25rem);
+  }
+}
+
+/* 다크 모드 스타일 (CSS 변수 사용) */
+[data-theme="dark"] .post-card--secret {
+  border-color: #d97706;
+  background: linear-gradient(135deg, 
+    rgba(217, 119, 6, 0.1) 0%, 
+    rgba(217, 119, 6, 0.05) 100%);
+}
+
+[data-theme="dark"] .secret-password-input {
+  background: var(--bg-secondary, #1f2937);
+  border-color: var(--border-color, #374151);
+  color: var(--text-primary, #f9fafb);
+}
+
+[data-theme="dark"] .secret-toggle-switch {
+  background: var(--border-color, #374151);
+}
+
+[data-theme="dark"] .secret-toggle-switch:hover {
+  background: var(--border-hover, #4b5563);
+}
+
+/* 애니메이션 효과 */
+.post-card--secret {
+  animation: secretGlow 3s ease-in-out infinite;
+}
+
+@keyframes secretGlow {
+  0%, 100% {
+    box-shadow: 0 4px 20px rgba(245, 158, 11, 0.1);
+  }
+  50% {
+    box-shadow: 0 4px 20px rgba(245, 158, 11, 0.2);
+  }
+}
+
+.secret-toggle-switch {
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.06);
+}
+
+.secret-toggle-input:checked + .secret-toggle-switch {
+  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.2);
+}
