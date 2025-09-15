@@ -61,6 +61,26 @@ export default function Home() {
     }
   };
 
+  // 게시글 제목과 내용 표시 로직
+  const getDisplayTitle = (post: Post) => {
+    if (post.isSecret) {
+      // 작성자 본인인 경우에만 제목 표시
+      if (user && post.author?.id === user.id) {
+        return post.title;
+      }
+      // 다른 사용자에게는 비밀글임을 표시
+      return "비밀글";
+    }
+    return post.title;
+  };
+
+  const getDisplayContent = (post: Post) => {
+    if (post.isSecret && (!user || post.author?.id !== user.id)) {
+      return "비밀글입니다. 클릭하여 비밀번호를 입력해주세요.";
+    }
+    return post.content.length > 150 ? `${post.content.substring(0, 150)}...` : post.content;
+  };
+
   // 데이터와 로딩/에러 상태 결정
   const data = isSearching ? searchResults : allPosts;
   const isLoading = isSearching ? isSearchLoading : isLoadingPosts;
@@ -203,9 +223,12 @@ export default function Home() {
                     )}
                     <h2 className="post-card-title">
                       {isSearching ? (
-                        <HighlightedText text={post.title} highlight={searchQuery} />
+                        <HighlightedText 
+                          text={getDisplayTitle(post)} 
+                          highlight={post.isSecret && (!user || post.author?.id !== user.id) ? "" : searchQuery} 
+                        />
                       ) : (
-                        post.title
+                        getDisplayTitle(post)
                       )}
                     </h2>
                   </div>
@@ -235,11 +258,11 @@ export default function Home() {
                   ) : (
                     isSearching ? (
                       <HighlightedText 
-                        text={post.content.length > 150 ? `${post.content.substring(0, 150)}...` : post.content}
+                        text={getDisplayContent(post)}
                         highlight={searchQuery}
                       />
                     ) : (
-                      post.content.length > 150 ? `${post.content.substring(0, 150)}...` : post.content
+                      getDisplayContent(post)
                     )
                   )}
                 </p>
@@ -281,7 +304,7 @@ export default function Home() {
             <li>여러 단어로 검색하면 더 정확한 결과를 얻을 수 있습니다</li>
             <li>제목, 내용, 작성자명에서 모두 검색됩니다</li>
             <li>대소문자는 구분하지 않습니다</li>
-            <li>비밀글도 검색 결과에 포함되지만, 작성자가 아닌 경우 내용이 숨겨집니다</li>
+            <li>비밀글은 작성자만 제목과 내용을 볼 수 있습니다</li>
           </ul>
         </div>
       )}
