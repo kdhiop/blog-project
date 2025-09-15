@@ -725,7 +725,6 @@ a:hover {
 
 .home-header {
   text-align: center;
-  margin-bottom: 3rem;
   padding: 2rem 0;
 }
 
@@ -2578,7 +2577,7 @@ a:hover {
 
 .home-search-bar {
   max-width: 600px;
-  margin: 0 auto 2rem auto;
+  margin: 0 auto 3rem auto;
 }
 
 .search-form {
@@ -2767,12 +2766,6 @@ a:hover {
 .search-suggestion-text {
   flex: 1;
   font-size: 0.95rem;
-}
-
-/* Search Info */
-.search-info {
-  margin-top: 1rem;
-  text-align: center;
 }
 
 .search-query-display {

@@ -213,14 +213,6 @@ export default function SearchBar({
           </div>
         )}
       </form>
-
-      {query.trim() && (
-        <div className="search-info">
-          <span className="search-query-display">
-            '{query.trim()}'에 대한 검색 결과
-          </span>
-        </div>
-      )}
     </div>
   );
 }
