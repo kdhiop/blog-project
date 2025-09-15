@@ -441,6 +441,10 @@ a:hover {
   margin-bottom: 1.25rem;
 }
 
+.form-group.no-margin {
+  margin-bottom: 0;
+}
+
 .form-label {
   font-size: 0.9rem;
   font-weight: 600;
@@ -1181,14 +1185,6 @@ a:hover {
   font-size: 0.9rem;
   color: var(--text-secondary);
   line-height: 1.5;
-}
-
-.auth-signup-benefits {
-  margin-top: 1.5rem;
-  padding: 1rem;
-  background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
-  border-radius: var(--radius-md);
-  border: 1px solid rgba(102, 126, 234, 0.2);
 }
 
 .auth-benefits-title {

@@ -208,7 +208,7 @@ export function Signup() {
               )}
             </div>
 
-            <div className="form-group">
+            <div className="form-group no-margin">
               <label htmlFor="password" className="form-label">
                 비밀번호
               </label>
@@ -348,22 +348,6 @@ export function Signup() {
               )}
             </button>
           </form>
-
-          <div className="auth-signup-benefits">
-            <p className="auth-benefits-title">회원가입 혜택</p>
-            <div className="auth-benefit-item">
-              <span className="auth-benefit-icon">✍️</span>
-              <span>자유로운 글 작성 및 공유</span>
-            </div>
-            <div className="auth-benefit-item">
-              <span className="auth-benefit-icon">💬</span>
-              <span>다른 사용자와 댓글로 소통</span>
-            </div>
-            <div className="auth-benefit-item">
-              <span className="auth-benefit-icon">📚</span>
-              <span>나만의 블로그 포트폴리오 구축</span>
-            </div>
-          </div>
         </div>
 
         <div className="auth-page-footer">
