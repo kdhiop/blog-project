@@ -17,7 +17,7 @@ export default function Navbar() {
     if (navSearchQuery.trim().length >= 2) {
       const searchParams = new URLSearchParams();
       searchParams.set('search', navSearchQuery.trim());
-      navigate(`/?${searchParams.toString()}`);
+      navigate(`/posts?${searchParams.toString()}`); // 검색 시 게시글 페이지로 이동
       setNavSearchQuery("");
     }
   };
@@ -58,6 +58,13 @@ export default function Navbar() {
             >
               <span className="nav-brand-icon">🏠</span>
               <span>홈</span>
+            </Link>
+            <Link
+              to="/posts"
+              className={`nav-link ${isActive('/posts') ? 'nav-link--active' : ''}`}
+            >
+              <span className="nav-brand-icon">📚</span>
+              <span>게시글</span>
             </Link>
             <Link
               to="/new"

@@ -1,5 +1,6 @@
 import { createBrowserRouter, createRoutesFromElements, Route } from "react-router-dom";
 import Home from "./pages/Home";
+import PostsPage from "./pages/PostsPage"; // 새 페이지 추가
 import NewPost from "./pages/NewPost";
 import PostDetail from "./pages/PostDetail";
 import Login from "./pages/Login";
@@ -25,20 +26,28 @@ function Shell({ children }: ShellProps) {
   );
 }
 
-// ProtectedRoute를 제거하고 직접 RequireAuth를 사용
 export const router = createBrowserRouter(
   createRoutesFromElements(
     <>
+      {/* 메인 홈 페이지 */}
       <Route path="/" element={<Shell><Home /></Shell>} />
+      
+      {/* 게시글 전체 목록 페이지 - 새로 추가 */}
+      <Route path="/posts" element={<Shell><PostsPage /></Shell>} />
+      
+      {/* 게시글 상세 페이지 */}
       <Route path="/posts/:id" element={<Shell><PostDetail /></Shell>} />
+      
+      {/* 인증 관련 페이지 */}
       <Route path="/login" element={<Shell><Login /></Shell>} />
       <Route path="/signup" element={<Shell><Signup /></Shell>} />
-      {/* 보호된 라우트 - RequireAuth 컴포넌트가 자체적으로 Outlet을 렌더링 */}
+      
+      {/* 보호된 라우트 - 글쓰기 */}
       <Route path="/new" element={
         <Shell>
           <RequireAuth />
         </Shell>
-      } >
+      }>
         {/* 중첩 라우트로 NewPost 컴포넌트 배치 */}
         <Route index element={<NewPost />} />
       </Route>
@@ -50,7 +59,18 @@ export const router = createBrowserRouter(
             <span className="ui-error-icon">🔍</span>
             <h2>페이지를 찾을 수 없습니다</h2>
             <p>요청하신 페이지가 존재하지 않습니다.</p>
-            <a href="/" className="ui-btn ui-btn-primary">홈으로 돌아가기</a>
+            <div className="ui-error-actions">
+              <button 
+                onClick={() => window.history.back()} 
+                className="ui-btn ui-btn-secondary"
+                style={{ marginRight: '1rem' }}
+              >
+                이전 페이지
+              </button>
+              <a href="/" className="ui-btn ui-btn-primary">
+                홈으로 돌아가기
+              </a>
+            </div>
           </div>
         </Shell>
       } />

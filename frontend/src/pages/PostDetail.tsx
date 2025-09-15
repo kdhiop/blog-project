@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getPost, deletePost, updatePost, verifySecretPassword } from "../api/posts";
 import { addComment, getComments, deleteComment, updateComment } from "../api/comments";
 import { useAuth } from "../context/AuthContext";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useConfirmModal } from "../components/ConfirmModal";
 import SecretPasswordModal from "../components/SecretPasswordModal";
 
@@ -39,6 +39,25 @@ export default function PostDetail() {
   const [showSecretModal, setShowSecretModal] = useState(false);
   const [secretPasswordError, setSecretPasswordError] = useState("");
 
+  // 작성자 여부 확인 함수
+  const isAuthor = (post: any) => {
+    return user && post?.author && post.author.id === user.id;
+  };
+
+  // 비밀글 접근 권한 확인
+  const canAccessSecretPost = (post: any) => {
+    if (!post?.isSecret) return true; // 공개글은 모두 접근 가능
+    if (isAuthor(post)) return true; // 작성자는 항상 접근 가능
+    return post.hasAccess; // 비밀번호 확인된 경우만 접근 가능
+  };
+
+  // 비밀글 모달 표시 조건 확인
+  useEffect(() => {
+    if (post && post.isSecret && !isAuthor(post) && !post.hasAccess && !showSecretModal) {
+      setShowSecretModal(true);
+    }
+  }, [post, user, showSecretModal]);
+
   // 비밀글 비밀번호 확인 뮤테이션
   const verifySecretMutation = useMutation({
     mutationFn: (password: string) => {
@@ -73,10 +92,10 @@ export default function PostDetail() {
 
   // 게시글 수정 취소
   const cancelEditPost = async () => {
-    const hasChanges = editTitle !== post?.title || 
-                      editContent !== post?.content || 
-                      editIsSecret !== Boolean(post?.isSecret) ||
-                      editSecretPassword.trim() !== "";
+    const hasChanges = editTitle !== post?.title ||
+      editContent !== post?.content ||
+      editIsSecret !== Boolean(post?.isSecret) ||
+      editSecretPassword.trim() !== "";
 
     if (hasChanges) {
       const confirmed = await showConfirm({
@@ -86,10 +105,10 @@ export default function PostDetail() {
         cancelText: "계속 수정",
         type: "warning"
       });
-      
+
       if (!confirmed) return;
     }
-    
+
     setIsEditingPost(false);
     setEditTitle("");
     setEditContent("");
@@ -107,7 +126,7 @@ export default function PostDetail() {
         cancelText: "취소",
         type: "info"
       });
-      
+
       if (confirmed) {
         setEditIsSecret(true);
       }
@@ -119,7 +138,7 @@ export default function PostDetail() {
         cancelText: "취소",
         type: "warning"
       });
-      
+
       if (confirmed) {
         setEditIsSecret(false);
         setEditSecretPassword("");
@@ -144,10 +163,10 @@ export default function PostDetail() {
         cancelText: "계속 수정",
         type: "warning"
       });
-      
+
       if (!confirmed) return;
     }
-    
+
     setEditingCommentId(null);
     setEditCommentText("");
   };
@@ -166,8 +185,8 @@ export default function PostDetail() {
 
   // 게시글 수정
   const updatePostMut = useMutation({
-    mutationFn: () => updatePost(postId, { 
-      title: editTitle, 
+    mutationFn: () => updatePost(postId, {
+      title: editTitle,
       content: editContent,
       isSecret: editIsSecret,
       secretPassword: editIsSecret && editSecretPassword.trim() ? editSecretPassword : undefined
@@ -263,7 +282,12 @@ export default function PostDetail() {
       return;
     }
 
-    if (!post?.author || post.author.id !== user.id) {
+    if (!post) {
+      // post가 아직 로드되지 않은 경우 안전하게 종료
+      return;
+    }
+
+    if (!isAuthor(post)) {
       await showConfirm({
         title: "권한 없음",
         message: "작성자만 삭제할 수 있습니다.",
@@ -273,7 +297,7 @@ export default function PostDetail() {
       });
       return;
     }
-    
+
     const postType = post.isSecret ? "비밀글" : "게시글";
     const confirmed = await showConfirm({
       title: `${postType} 삭제`,
@@ -311,9 +335,9 @@ export default function PostDetail() {
       });
       return;
     }
-    
-    const previewContent = content && content.length > 50 
-      ? `${content.substring(0, 50)}...` 
+
+    const previewContent = content && content.length > 50
+      ? `${content.substring(0, 50)}...`
       : content;
 
     const confirmed = await showConfirm({
@@ -364,11 +388,30 @@ export default function PostDetail() {
     );
   }
 
-  // 비밀글이고 접근 권한이 없는 경우
-  if (post.isSecret && !post.hasAccess) {
-    if (!showSecretModal) {
-      setShowSecretModal(true);
-    }
+  // 비밀글 접근 권한이 없는 경우에만 모달 표시
+  if (post.isSecret && !canAccessSecretPost(post)) {
+    return (
+      <>
+        <div className="post-detail-container">
+          <div className="ui-loading-container">
+            <div className="post-detail-secret-waiting">
+              <span className="post-detail-secret-icon">🔐</span>
+              <h2>비밀글 접근</h2>
+              <p>비밀번호를 입력하여 게시글을 확인하세요</p>
+            </div>
+          </div>
+        </div>
+
+        <SecretPasswordModal
+          isOpen={showSecretModal}
+          title={post?.title || ""}
+          onConfirm={handleSecretPasswordSubmit}
+          onCancel={handleSecretPasswordCancel}
+          isLoading={verifySecretMutation.isPending}
+          error={secretPasswordError}
+        />
+      </>
+    );
   }
 
   return (
@@ -384,11 +427,16 @@ export default function PostDetail() {
                     <div className="post-secret-badge">
                       <span>🔐</span>
                       <span>비밀글</span>
+                      {isAuthor(post) && (
+                        <span className="post-secret-owner-indicator">
+                          (내 비밀글)
+                        </span>
+                      )}
                     </div>
                   )}
                   <h1 className="post-detail-title">{post.title}</h1>
                 </div>
-                
+
                 <div className="post-detail-meta">
                   {post.author && (
                     <div className="post-detail-author">
@@ -397,12 +445,17 @@ export default function PostDetail() {
                       </div>
                       <div className="post-detail-author-info">
                         <span className="post-detail-author-label">작성자</span>
-                        <span className="post-detail-author-name">{post.author.username}</span>
+                        <span className="post-detail-author-name">
+                          {post.author.username}
+                          {isAuthor(post) && (
+                            <span className="post-detail-author-badge">(나)</span>
+                          )}
+                        </span>
                       </div>
                     </div>
                   )}
 
-                  {user && post.author && post.author.id === user.id && (
+                  {isAuthor(post) && (
                     <div className="post-detail-actions">
                       <button onClick={startEditPost} className="post-edit-btn">
                         <span>✏️</span>
@@ -462,7 +515,7 @@ export default function PostDetail() {
                   </button>
                 </div>
               </div>
-              
+
               <div className="post-edit-form">
                 <div className="form-group">
                   <label htmlFor="edit-title" className="form-label">
@@ -571,8 +624,8 @@ export default function PostDetail() {
               </span>
             </div>
             <div className="post-share-buttons">
-              <button 
-                className="post-share-btn" 
+              <button
+                className="post-share-btn"
                 title="링크 복사"
                 onClick={async () => {
                   try {
@@ -665,6 +718,9 @@ export default function PostDetail() {
                           <div className="comment-author-info">
                             <span className="comment-author-name">
                               {c.author ? c.author.username : "익명"}
+                              {user && c.author && c.author.id === user.id && (
+                                <span className="comment-author-badge">(나)</span>
+                              )}
                             </span>
                             <span className="comment-time">방금 전</span>
                           </div>
@@ -773,7 +829,7 @@ export default function PostDetail() {
           )}
         </section>
       </div>
-      
+
       {/* 비밀글 비밀번호 입력 모달 */}
       <SecretPasswordModal
         isOpen={showSecretModal}
@@ -783,7 +839,7 @@ export default function PostDetail() {
         isLoading={verifySecretMutation.isPending}
         error={secretPasswordError}
       />
-      
+
       {/* 커스텀 모달 컴포넌트 */}
       <ConfirmModalComponent />
     </div>

@@ -68,8 +68,8 @@ export default function Home() {
       if (user && post.author?.id === user.id) {
         return post.title;
       }
-      // 다른 사용자에게는 비밀글임을 표시
-      return "비밀글";
+      // 다른 사용자에게는 비밀글임을 표시 (메인 홈에서는 제목 숨김)
+      return "🔐 비밀글";
     }
     return post.title;
   };
@@ -81,11 +81,27 @@ export default function Home() {
     return post.content.length > 150 ? `${post.content.substring(0, 150)}...` : post.content;
   };
 
+  // 메인 홈에서 표시할 게시글 필터링 (최대 3개)
+  const getDisplayPosts = (posts: Post[]) => {
+    if (!posts) return [];
+    
+    if (isSearching) {
+      // 검색 중일 때는 모든 결과 표시
+      return posts;
+    } else {
+      // 메인 홈에서는 최대 3개만 표시
+      return posts.slice(0, 3);
+    }
+  };
+
   // 데이터와 로딩/에러 상태 결정
   const data = isSearching ? searchResults : allPosts;
   const isLoading = isSearching ? isSearchLoading : isLoadingPosts;
   const isError = isSearching ? isSearchError : isErrorPosts;
   const error = isSearching ? searchError : postsError;
+
+  // 표시할 게시글 목록
+  const displayPosts = getDisplayPosts(data || []);
 
   if (isLoading) {
     return (
@@ -209,91 +225,108 @@ export default function Home() {
           )}
         </div>
       ) : (
-        <div className="home-posts-grid">
-          {data!.map((post: Post) => (
-            <article key={post.id} className={`post-card ${post.isSecret ? 'post-card--secret' : ''}`}>
-              <Link to={`/posts/${post.id}`} className="post-card-link">
-                <div className="post-card-header">
-                  <div className="post-card-title-wrapper">
-                    {post.isSecret && (
-                      <div className="post-card-secret-badge">
-                        <span className="post-card-secret-icon">🔐</span>
-                        <span className="post-card-secret-text">비밀글</span>
+        <>
+          <div className="home-posts-grid">
+            {displayPosts.map((post: Post) => (
+              <article key={post.id} className={`post-card ${post.isSecret ? 'post-card--secret' : ''}`}>
+                <Link to={`/posts/${post.id}`} className="post-card-link">
+                  <div className="post-card-header">
+                    <div className="post-card-title-wrapper">
+                      {post.isSecret && (
+                        <div className="post-card-secret-badge">
+                          <span className="post-card-secret-icon">🔐</span>
+                          <span className="post-card-secret-text">비밀글</span>
+                        </div>
+                      )}
+                      <h2 className="post-card-title">
+                        {isSearching ? (
+                          <HighlightedText 
+                            text={getDisplayTitle(post)} 
+                            highlight={post.isSecret && (!user || post.author?.id !== user.id) ? "" : searchQuery} 
+                          />
+                        ) : (
+                          getDisplayTitle(post)
+                        )}
+                      </h2>
+                    </div>
+                    {post.author && (
+                      <div className="post-card-meta">
+                        <span className="post-card-author-avatar">✍️</span>
+                        <span className="post-card-author-name">
+                          {isSearching ? (
+                            <HighlightedText text={post.author.username} highlight={searchQuery} />
+                          ) : (
+                            post.author.username
+                          )}
+                        </span>
+                        {post.isSecret && post.author.id === user?.id && (
+                          <span className="post-card-owner-badge" title="내가 작성한 비밀글">
+                            👤
+                          </span>
+                        )}
                       </div>
                     )}
-                    <h2 className="post-card-title">
-                      {isSearching ? (
+                  </div>
+                  <p className="post-card-excerpt">
+                    {post.isSecret && (!user || post.author?.id !== user.id) ? (
+                      <span className="post-card-secret-preview">
+                        🔒 비밀글입니다. 클릭하여 비밀번호를 입력해주세요.
+                      </span>
+                    ) : (
+                      isSearching ? (
                         <HighlightedText 
-                          text={getDisplayTitle(post)} 
-                          highlight={post.isSecret && (!user || post.author?.id !== user.id) ? "" : searchQuery} 
+                          text={getDisplayContent(post)}
+                          highlight={searchQuery}
                         />
                       ) : (
-                        getDisplayTitle(post)
-                      )}
-                    </h2>
-                  </div>
-                  {post.author && (
-                    <div className="post-card-meta">
-                      <span className="post-card-author-avatar">✍️</span>
-                      <span className="post-card-author-name">
-                        {isSearching ? (
-                          <HighlightedText text={post.author.username} highlight={searchQuery} />
-                        ) : (
-                          post.author.username
-                        )}
-                      </span>
-                      {post.isSecret && post.author.id === user?.id && (
-                        <span className="post-card-owner-badge" title="내가 작성한 비밀글">
-                          👤
-                        </span>
-                      )}
-                    </div>
-                  )}
-                </div>
-                <p className="post-card-excerpt">
-                  {post.isSecret && (!user || post.author?.id !== user.id) ? (
-                    <span className="post-card-secret-preview">
-                      🔒 비밀글입니다. 클릭하여 비밀번호를 입력해주세요.
-                    </span>
-                  ) : (
-                    isSearching ? (
-                      <HighlightedText 
-                        text={getDisplayContent(post)}
-                        highlight={searchQuery}
-                      />
-                    ) : (
-                      getDisplayContent(post)
-                    )
-                  )}
-                </p>
-                <div className="post-card-footer">
-                  <div className="post-card-stats">
-                    <span className="post-card-stat">
-                      <span className="post-card-stat-icon">💬</span>
-                      <span className="post-card-stat-text">댓글</span>
-                    </span>
-                    <span className="post-card-stat">
-                      <span className="post-card-stat-icon">👁️</span>
-                      <span className="post-card-stat-text">조회</span>
-                    </span>
-                  </div>
-                  <span className="post-card-read-more">
-                    {post.isSecret && (!user || post.author?.id !== user.id) ? (
-                      <>
-                        <span className="post-card-secret-icon">🔐</span>
-                        열기
-                      </>
-                    ) : (
-                      <>
-                        읽기 →
-                      </>
+                        getDisplayContent(post)
+                      )
                     )}
-                  </span>
-                </div>
+                  </p>
+                  <div className="post-card-footer">
+                    <div className="post-card-stats">
+                      <span className="post-card-stat">
+                        <span className="post-card-stat-icon">💬</span>
+                        <span className="post-card-stat-text">댓글</span>
+                      </span>
+                      <span className="post-card-stat">
+                        <span className="post-card-stat-icon">👁️</span>
+                        <span className="post-card-stat-text">조회</span>
+                      </span>
+                    </div>
+                    <span className="post-card-read-more">
+                      {post.isSecret && (!user || post.author?.id !== user.id) ? (
+                        <>
+                          <span className="post-card-secret-icon">🔐</span>
+                          열기
+                        </>
+                      ) : (
+                        <>
+                          읽기 →
+                        </>
+                      )}
+                    </span>
+                  </div>
+                </Link>
+              </article>
+            ))}
+          </div>
+
+          {/* 메인 홈에서만 "더 보기" 버튼 표시 */}
+          {!isSearching && data && data.length > 3 && (
+            <div className="home-more-posts">
+              <div className="home-more-posts-info">
+                <p>총 {data.length}개의 게시글이 있습니다</p>
+                <p>더 많은 게시글을 확인해보세요!</p>
+              </div>
+              <Link to="/posts" className="home-more-posts-btn">
+                <span>📚</span>
+                모든 게시글 보기
+                <span>→</span>
               </Link>
-            </article>
-          ))}
-        </div>
+            </div>
+          )}
+        </>
       )}
 
       {/* 검색 팁 */}
