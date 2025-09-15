@@ -35,24 +35,25 @@ public class PostController {
 		
 		if (searchQuery != null && !searchQuery.trim().isEmpty()) {
 			logger.debug("게시글 검색 요청: query='{}', userId={}", searchQuery, currentUserId);
-			return postService.search(searchQuery.trim()).stream()
-				.map(post -> toResp(post, currentUserId))
+			// 검색에서는 공개글만 조회
+			return postService.searchPublicPosts(searchQuery.trim()).stream()
+				.map(post -> toResp(post, currentUserId, false)) // 검색에서는 마스킹 안함
 				.collect(Collectors.toList());
 		} else {
 			logger.debug("전체 게시글 목록 조회 요청 (비밀글 포함), userId={}", currentUserId);
 			return postService.listAll().stream()
-				.map(post -> toResp(post, currentUserId))
+				.map(post -> toResp(post, currentUserId, true)) // 목록에서는 마스킹 적용
 				.collect(Collectors.toList());
 		}
 	}
 
-	// 별도의 검색 전용 엔드포인트
+	// 별도의 검색 전용 엔드포인트 - 공개글만 검색
 	@GetMapping("/search")
 	public List<PostResponse> search(@RequestParam("q") String query,
 									 @AuthenticationPrincipal CustomUserDetails userDetails) {
 		try {
 			Long currentUserId = userDetails != null ? userDetails.getId() : null;
-			logger.info("게시글 검색: query='{}', userId={}", query, currentUserId);
+			logger.info("게시글 검색: query='{}', userId={} (공개글만)", query, currentUserId);
 			
 			if (query == null || query.trim().isEmpty()) {
 				logger.warn("빈 검색어로 검색 시도");
@@ -65,11 +66,12 @@ public class PostController {
 				throw new IllegalArgumentException("검색어는 2자 이상이어야 합니다");
 			}
 			
-			List<Post> searchResults = postService.search(trimmedQuery);
-			logger.info("검색 완료: query='{}', results={}", trimmedQuery, searchResults.size());
+			// 공개글만 검색
+			List<Post> searchResults = postService.searchPublicPosts(trimmedQuery);
+			logger.info("검색 완료: query='{}', results={} (공개글만)", trimmedQuery, searchResults.size());
 			
 			return searchResults.stream()
-				.map(post -> toResp(post, currentUserId))
+				.map(post -> toResp(post, currentUserId, false)) // 검색 결과는 마스킹 안함
 				.collect(Collectors.toList());
 				
 		} catch (IllegalArgumentException e) {
@@ -89,7 +91,7 @@ public class PostController {
 			logger.debug("게시글 상세 조회: postId={}, userId={}", id, currentUserId);
 			Post post = postService.get(id);
 			
-			PostResponse response = toResp(post, currentUserId);
+			PostResponse response = toResp(post, currentUserId, false); // 상세 페이지에서는 마스킹 안함
 			
 			// 비밀글 처리
 			if (Boolean.TRUE.equals(post.getIsSecret())) {
@@ -135,7 +137,7 @@ public class PostController {
 			
 			if (isValid) {
 				Post post = postService.get(id);
-				PostResponse response = toResp(post, currentUserId);
+				PostResponse response = toResp(post, currentUserId, false); // 상세 보기용
 				response.setHasAccess(true);
 				response.setContent(post.getContent()); // 실제 내용 설정
 				
@@ -168,7 +170,7 @@ public class PostController {
 			
 			Post post = postService.create(userDetails.getId(), req.getTitle(), req.getContent(), 
 										   req.getIsSecret(), req.getSecretPassword());
-			return ResponseEntity.ok(toResp(post, userDetails.getId()));
+			return ResponseEntity.ok(toResp(post, userDetails.getId(), false));
 		} catch (SecurityException e) {
 			throw e;
 		} catch (Exception e) {
@@ -193,7 +195,7 @@ public class PostController {
 			
 			Post post = postService.update(id, userDetails.getId(), req.getTitle(), req.getContent(),
 										   req.getIsSecret(), req.getSecretPassword());
-			return ResponseEntity.ok(toResp(post, userDetails.getId()));
+			return ResponseEntity.ok(toResp(post, userDetails.getId(), false));
 		} catch (SecurityException e) {
 			logger.warn("게시글 수정 권한 없음: postId={}, userId={}", id, userDetails != null ? userDetails.getId() : null);
 			throw e;
@@ -225,11 +227,10 @@ public class PostController {
 		}
 	}
 
-	// PostResponse 변환 메서드 (현재 사용자 ID 고려)
-	private PostResponse toResp(Post p, Long currentUserId) {
+	// PostResponse 변환 메서드 (현재 사용자 ID 고려, 마스킹 옵션 추가)
+	private PostResponse toResp(Post p, Long currentUserId, boolean maskSecretPosts) {
 		PostResponse r = new PostResponse();
 		r.setId(p.getId());
-		r.setTitle(p.getTitle());
 		r.setIsSecret(p.getIsSecret());
 		
 		// 작성자 정보 설정
@@ -246,16 +247,24 @@ public class PostController {
 				p.getAuthor().getId().equals(currentUserId);
 			
 			if (isAuthor) {
-				// 작성자는 실제 내용을 볼 수 있음
+				// 작성자는 실제 제목과 내용을 볼 수 있음
+				r.setTitle(p.getTitle());
 				r.setContent(p.getContent());
 				r.setHasAccess(true);
-			} else {
-				// 작성자가 아니면 미리보기 메시지
+			} else if (maskSecretPosts) {
+				// 목록에서는 제목과 내용을 모두 숨김
+				r.setTitle("🔐 비밀글");
 				r.setContent("[비밀글입니다. 클릭하여 비밀번호를 입력해주세요.]");
+				r.setHasAccess(false);
+			} else {
+				// 상세 보기나 검색에서는 제목은 보이되 내용만 숨김
+				r.setTitle(p.getTitle());
+				r.setContent("[비밀글입니다. 비밀번호를 입력해주세요.]");
 				r.setHasAccess(false);
 			}
 		} else {
 			// 공개글은 모든 내용 표시
+			r.setTitle(p.getTitle());
 			r.setContent(p.getContent());
 			r.setHasAccess(true);
 		}

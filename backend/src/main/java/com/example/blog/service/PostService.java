@@ -35,7 +35,35 @@ public class PostService {
         return posts;
     }
 
-    // 검색 (비밀글 포함)
+    // 공개글만 검색 (새로 추가)
+    public List<Post> searchPublicPosts(String keyword) {
+        if (keyword == null || keyword.trim().isEmpty()) {
+            logger.warn("빈 검색어로 공개글 검색 시도");
+            throw new IllegalArgumentException("검색어를 입력해주세요");
+        }
+        
+        String trimmedKeyword = keyword.trim();
+        if (trimmedKeyword.length() < 2) {
+            logger.warn("너무 짧은 검색어: '{}'", trimmedKeyword);
+            throw new IllegalArgumentException("검색어는 2자 이상이어야 합니다");
+        }
+        
+        logger.info("공개글 검색: keyword='{}'", trimmedKeyword);
+        
+        try {
+            // 공개글만 검색
+            List<Post> searchResults = postRepository.findByKeywordPublicWithAuthor(trimmedKeyword);
+            
+            logger.info("공개글 검색 완료: keyword='{}', 결과={}개", trimmedKeyword, searchResults.size());
+            
+            return searchResults;
+        } catch (Exception e) {
+            logger.error("공개글 검색 중 오류 발생: keyword='{}'", trimmedKeyword, e);
+            throw new RuntimeException("검색 처리 중 오류가 발생했습니다");
+        }
+    }
+
+    // 전체 검색 (비밀글 포함) - 기존 메서드 유지 (관리용)
     public List<Post> search(String keyword) {
         if (keyword == null || keyword.trim().isEmpty()) {
             logger.warn("빈 검색어로 검색 시도");
@@ -48,17 +76,16 @@ public class PostService {
             throw new IllegalArgumentException("검색어는 2자 이상이어야 합니다");
         }
         
-        logger.info("게시글 검색: keyword='{}'", trimmedKeyword);
+        logger.info("전체 게시글 검색: keyword='{}'", trimmedKeyword);
         
         try {
-            // 전체 게시글에서 검색 (비밀글 포함)
             List<Post> searchResults = postRepository.findByFullTextSearchWithAuthor(trimmedKeyword);
             
             long secretPostCount = searchResults.stream()
                 .mapToLong(post -> Boolean.TRUE.equals(post.getIsSecret()) ? 1L : 0L)
                 .sum();
             
-            logger.info("검색 완료: keyword='{}', 총 결과={}개, 비밀글={}개", 
+            logger.info("전체 검색 완료: keyword='{}', 총 결과={}개, 비밀글={}개", 
                        trimmedKeyword, searchResults.size(), secretPostCount);
             
             return searchResults;

@@ -5,6 +5,7 @@ import { router } from "./router";
 import "./index.css";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AuthProvider } from "./context/AuthContext";
+import { SecretAccessProvider } from "./context/SecretAccessContext";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 
 const qc = new QueryClient({
@@ -25,7 +26,9 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
     <ErrorBoundary>
       <QueryClientProvider client={qc}>
         <AuthProvider>
-          <RouterProvider router={router} />
+          <SecretAccessProvider>
+            <RouterProvider router={router} />
+          </SecretAccessProvider>
         </AuthProvider>
       </QueryClientProvider>
     </ErrorBoundary>
