@@ -44,13 +44,6 @@ export default function PostDetail() {
     return user && post?.author && post.author.id === user.id;
   };
 
-  // 비밀글 접근 권한 확인
-  const canAccessSecretPost = (post: any) => {
-    if (!post?.isSecret) return true; // 공개글은 모두 접근 가능
-    if (isAuthor(post)) return true; // 작성자는 항상 접근 가능
-    return post.hasAccess; // 비밀번호 확인된 경우만 접근 가능
-  };
-
   // 비밀글 모달을 표시해야 하는지 확인
   const shouldShowSecretModal = (post: any) => {
     if (!post?.isSecret) return false; // 공개글은 모달 불필요

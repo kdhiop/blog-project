@@ -385,7 +385,9 @@ function HighlightedText({ text, highlight }: HighlightedTextProps) {
 
   keywords.forEach((keyword) => {
     if (keyword) {
-      const regex = new RegExp(`(${keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\            <li>비밀글은 작성자만 제목과 내')})`, 'gi');
+      // 정규식 특수문자 이스케이프 처리 수정
+      const escapedKeyword = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const regex = new RegExp(`(${escapedKeyword})`, 'gi');
       highlightedText = highlightedText.replace(regex, '<mark>$1</mark>');
     }
   });
