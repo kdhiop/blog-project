@@ -91,8 +91,6 @@ public class PostController {
 			logger.debug("게시글 상세 조회: postId={}, userId={}", id, currentUserId);
 			Post post = postService.get(id);
 			
-			PostResponse response = toResp(post, currentUserId, false); // 상세 페이지에서는 마스킹 안함
-			
 			// 비밀글 처리 - 중요: 백엔드에서 접근 권한을 확실히 설정
 			if (Boolean.TRUE.equals(post.getIsSecret())) {
 				// 작성자인지 확인
@@ -102,22 +100,30 @@ public class PostController {
 				
 				if (isAuthor) {
 					// 작성자는 항상 접근 가능하며 실제 내용을 볼 수 있음
+					PostResponse response = toResp(post, currentUserId, false);
 					response.setHasAccess(true);
 					response.setContent(post.getContent()); // 실제 내용 설정
+					response.setTitle(post.getTitle()); // 실제 제목 설정
 					logger.debug("작성자의 비밀글 접근: postId={}, authorId={}", id, currentUserId);
+					return ResponseEntity.ok(response);
 				} else {
 					// 작성자가 아니면 내용 숨김 - 비밀번호 입력 필요
+					PostResponse response = toResp(post, currentUserId, false);
 					response.setContent("[비밀글입니다. 비밀번호를 입력해주세요.]");
+					response.setTitle(post.getTitle()); // 제목은 보여줌
 					response.setHasAccess(false);
 					logger.debug("비밀글 접근 제한: postId={}, userId={}", id, currentUserId);
+					return ResponseEntity.ok(response);
 				}
 			} else {
 				// 공개글은 모든 내용 표시
+				PostResponse response = toResp(post, currentUserId, false);
 				response.setHasAccess(true);
 				response.setContent(post.getContent());
+				response.setTitle(post.getTitle());
+				return ResponseEntity.ok(response);
 			}
 			
-			return ResponseEntity.ok(response);
 		} catch (RuntimeException e) {
 			logger.warn("게시글 조회 실패: postId={}, error={}", id, e.getMessage());
 			throw e;
