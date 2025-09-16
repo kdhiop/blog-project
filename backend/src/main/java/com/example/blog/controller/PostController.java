@@ -93,7 +93,7 @@ public class PostController {
 			
 			PostResponse response = toResp(post, currentUserId, false); // 상세 페이지에서는 마스킹 안함
 			
-			// 비밀글 처리
+			// 비밀글 처리 - 중요: 백엔드에서 접근 권한을 확실히 설정
 			if (Boolean.TRUE.equals(post.getIsSecret())) {
 				// 작성자인지 확인
 				boolean isAuthor = currentUserId != null && 
@@ -101,19 +101,20 @@ public class PostController {
 					post.getAuthor().getId().equals(currentUserId);
 				
 				if (isAuthor) {
-					// 작성자는 항상 접근 가능
+					// 작성자는 항상 접근 가능하며 실제 내용을 볼 수 있음
 					response.setHasAccess(true);
 					response.setContent(post.getContent()); // 실제 내용 설정
+					logger.debug("작성자의 비밀글 접근: postId={}, authorId={}", id, currentUserId);
 				} else {
-					// 작성자가 아니면 내용 숨김
+					// 작성자가 아니면 내용 숨김 - 비밀번호 입력 필요
 					response.setContent("[비밀글입니다. 비밀번호를 입력해주세요.]");
 					response.setHasAccess(false);
+					logger.debug("비밀글 접근 제한: postId={}, userId={}", id, currentUserId);
 				}
-				
-				logger.debug("비밀글 접근 처리: postId={}, isAuthor={}, hasAccess={}", 
-						   id, isAuthor, response.getHasAccess());
 			} else {
+				// 공개글은 모든 내용 표시
 				response.setHasAccess(true);
+				response.setContent(post.getContent());
 			}
 			
 			return ResponseEntity.ok(response);
@@ -138,6 +139,7 @@ public class PostController {
 			if (isValid) {
 				Post post = postService.get(id);
 				PostResponse response = toResp(post, currentUserId, false); // 상세 보기용
+				// 비밀번호 확인 성공 - 접근 권한 부여하고 실제 내용 제공
 				response.setHasAccess(true);
 				response.setContent(post.getContent()); // 실제 내용 설정
 				
@@ -170,7 +172,13 @@ public class PostController {
 			
 			Post post = postService.create(userDetails.getId(), req.getTitle(), req.getContent(), 
 										   req.getIsSecret(), req.getSecretPassword());
-			return ResponseEntity.ok(toResp(post, userDetails.getId(), false));
+			
+			// 작성자는 자신의 글에 항상 접근 가능
+			PostResponse response = toResp(post, userDetails.getId(), false);
+			response.setHasAccess(true);
+			response.setContent(post.getContent());
+			
+			return ResponseEntity.ok(response);
 		} catch (SecurityException e) {
 			throw e;
 		} catch (Exception e) {
@@ -195,7 +203,13 @@ public class PostController {
 			
 			Post post = postService.update(id, userDetails.getId(), req.getTitle(), req.getContent(),
 										   req.getIsSecret(), req.getSecretPassword());
-			return ResponseEntity.ok(toResp(post, userDetails.getId(), false));
+			
+			// 작성자는 자신의 글에 항상 접근 가능
+			PostResponse response = toResp(post, userDetails.getId(), false);
+			response.setHasAccess(true);
+			response.setContent(post.getContent());
+			
+			return ResponseEntity.ok(response);
 		} catch (SecurityException e) {
 			logger.warn("게시글 수정 권한 없음: postId={}, userId={}", id, userDetails != null ? userDetails.getId() : null);
 			throw e;
