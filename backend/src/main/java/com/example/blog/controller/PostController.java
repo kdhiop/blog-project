@@ -134,22 +134,43 @@ public class PostController {
 			Long currentUserId = userDetails != null ? userDetails.getId() : null;
 			logger.info("비밀글 비밀번호 확인: postId={}, userId={}", id, currentUserId);
 			
+			// 먼저 게시글 가져오기
+			Post post = postService.get(id);
+			
+			// 비밀글인지 확인
+			if (!Boolean.TRUE.equals(post.getIsSecret())) {
+				logger.warn("비밀글이 아닌 게시글에 대한 비밀번호 확인 시도: postId={}", id);
+				throw new IllegalArgumentException("비밀글이 아닙니다");
+			}
+			
+			// 작성자인 경우 비밀번호 확인 없이 접근 허용
+			boolean isAuthor = currentUserId != null && 
+				post.getAuthor() != null && 
+				post.getAuthor().getId().equals(currentUserId);
+			
+			if (isAuthor) {
+				logger.info("작성자의 비밀글 접근 (비밀번호 확인 불필요): postId={}, authorId={}", id, currentUserId);
+				PostResponse response = toResp(post, currentUserId, false);
+				response.setHasAccess(true);
+				response.setContent(post.getContent());
+				return ResponseEntity.ok(response);
+			}
+			
+			// 작성자가 아닌 경우 비밀번호 확인
 			boolean isValid = postService.verifySecretPassword(id, request.getPassword());
 			
 			if (isValid) {
-				Post post = postService.get(id);
-				PostResponse response = toResp(post, currentUserId, false); // 상세 보기용
-				// 비밀번호 확인 성공 - 접근 권한 부여하고 실제 내용 제공
+				PostResponse response = toResp(post, currentUserId, false);
 				response.setHasAccess(true);
 				response.setContent(post.getContent()); // 실제 내용 설정
 				
-				logger.info("비밀글 접근 성공: postId={}", id);
+				logger.info("비밀글 비밀번호 확인 성공: postId={}, userId={}", id, currentUserId);
 				return ResponseEntity.ok(response);
 			} else {
-				logger.warn("비밀글 비밀번호 불일치: postId={}", id);
+				logger.warn("비밀글 비밀번호 불일치: postId={}, userId={}", id, currentUserId);
 				throw new SecurityException("비밀번호가 일치하지 않습니다");
 			}
-		} catch (SecurityException e) {
+		} catch (SecurityException | IllegalArgumentException e) {
 			throw e;
 		} catch (Exception e) {
 			logger.error("비밀글 비밀번호 확인 중 오류: postId={}", id, e);

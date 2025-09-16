@@ -51,9 +51,16 @@ export default function PostDetail() {
     return post.hasAccess; // 비밀번호 확인된 경우만 접근 가능
   };
 
+  // 비밀글 모달을 표시해야 하는지 확인
+  const shouldShowSecretModal = (post: any) => {
+    if (!post?.isSecret) return false; // 공개글은 모달 불필요
+    if (isAuthor(post)) return false; // 작성자는 모달 불필요
+    return !post.hasAccess; // 비밀번호 확인 안된 경우만 모달 필요
+  };
+
   // 비밀글 모달 표시 조건 확인 - 작성자가 아닌 경우에만
   useEffect(() => {
-    if (post && post.isSecret && !isAuthor(post) && !post.hasAccess && !showSecretModal) {
+    if (post && shouldShowSecretModal(post) && !showSecretModal) {
       setShowSecretModal(true);
     }
   }, [post, user, showSecretModal]);
@@ -385,9 +392,7 @@ export default function PostDetail() {
 
   // 비밀글이고 접근 권한이 없는 경우에만 모달 표시
   // 단, 작성자인 경우는 제외
-  const shouldShowSecretModal = post.isSecret && !canAccessSecretPost(post) && !isAuthor(post);
-  
-  if (shouldShowSecretModal) {
+  if (post && shouldShowSecretModal(post)) {
     return (
       <>
         <div className="post-detail-container">
@@ -482,7 +487,13 @@ export default function PostDetail() {
               </div>
 
               <div className="post-detail-body">
-                <div className="post-detail-content">{post.content}</div>
+                <div className="post-detail-content">
+                  {/* 작성자는 항상 실제 내용을 볼 수 있음 */}
+                  {post.isSecret && !isAuthor(post) && !post.hasAccess 
+                    ? "[비밀글입니다. 비밀번호를 입력해주세요.]" 
+                    : post.content
+                  }
+                </div>
               </div>
             </>
           ) : (
