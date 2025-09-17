@@ -85,103 +85,50 @@ public class PostController {
 
 	@GetMapping("/{id}")
 	public ResponseEntity<PostResponse> get(@PathVariable Long id, 
-											@AuthenticationPrincipal CustomUserDetails userDetails) {
-		try {
-			Long currentUserId = userDetails != null ? userDetails.getId() : null;
-			logger.debug("게시글 상세 조회: postId={}, userId={}", id, currentUserId);
-			Post post = postService.get(id);
-			
-			// 비밀글 처리 - 중요: 백엔드에서 접근 권한을 확실히 설정
-			if (Boolean.TRUE.equals(post.getIsSecret())) {
-				// 작성자인지 확인
-				boolean isAuthor = currentUserId != null && 
-					post.getAuthor() != null && 
-					post.getAuthor().getId().equals(currentUserId);
-				
-				if (isAuthor) {
-					// 작성자는 항상 접근 가능하며 실제 내용을 볼 수 있음
-					PostResponse response = toResp(post, currentUserId, false);
-					response.setHasAccess(true);
-					response.setContent(post.getContent()); // 실제 내용 설정
-					response.setTitle(post.getTitle()); // 실제 제목 설정
-					logger.debug("작성자의 비밀글 접근: postId={}, authorId={}", id, currentUserId);
-					return ResponseEntity.ok(response);
-				} else {
-					// 작성자가 아니면 내용 숨김 - 비밀번호 입력 필요
-					PostResponse response = toResp(post, currentUserId, false);
-					response.setContent("[비밀글입니다. 비밀번호를 입력해주세요.]");
-					response.setTitle(post.getTitle()); // 제목은 보여줌
-					response.setHasAccess(false);
-					logger.debug("비밀글 접근 제한: postId={}, userId={}", id, currentUserId);
-					return ResponseEntity.ok(response);
-				}
-			} else {
-				// 공개글은 모든 내용 표시
-				PostResponse response = toResp(post, currentUserId, false);
-				response.setHasAccess(true);
-				response.setContent(post.getContent());
-				response.setTitle(post.getTitle());
-				return ResponseEntity.ok(response);
-			}
-			
-		} catch (RuntimeException e) {
-			logger.warn("게시글 조회 실패: postId={}, error={}", id, e.getMessage());
-			throw e;
-		}
+	                                        @AuthenticationPrincipal CustomUserDetails userDetails) {
+	    try {
+	        Long currentUserId = userDetails != null ? userDetails.getId() : null;
+	        logger.debug("게시글 상세 조회: postId={}, userId={}", id, currentUserId);
+	        
+	        // 🔧 currentUserId를 전달하여 hasAccess 설정
+	        Post post = postService.get(id, currentUserId);
+	        
+	        // 🔧 PostResponse 변환 - 마스킹 없이 변환
+	        PostResponse response = toResp(post, currentUserId, false);
+	        
+	        return ResponseEntity.ok(response);
+	        
+	    } catch (RuntimeException e) {
+	        logger.warn("게시글 조회 실패: postId={}, error={}", id, e.getMessage());
+	        throw e;
+	    }
 	}
 
 	// 비밀글 비밀번호 확인 엔드포인트
 	@PostMapping("/{id}/verify-password")
 	public ResponseEntity<PostResponse> verifySecretPassword(
-			@PathVariable Long id,
-			@Valid @RequestBody SecretPasswordRequest request,
-			@AuthenticationPrincipal CustomUserDetails userDetails) {
-		try {
-			Long currentUserId = userDetails != null ? userDetails.getId() : null;
-			logger.info("비밀글 비밀번호 확인: postId={}, userId={}", id, currentUserId);
-			
-			// 먼저 게시글 가져오기
-			Post post = postService.get(id);
-			
-			// 비밀글인지 확인
-			if (!Boolean.TRUE.equals(post.getIsSecret())) {
-				logger.warn("비밀글이 아닌 게시글에 대한 비밀번호 확인 시도: postId={}", id);
-				throw new IllegalArgumentException("비밀글이 아닙니다");
-			}
-			
-			// 작성자인 경우 비밀번호 확인 없이 접근 허용
-			boolean isAuthor = currentUserId != null && 
-				post.getAuthor() != null && 
-				post.getAuthor().getId().equals(currentUserId);
-			
-			if (isAuthor) {
-				logger.info("작성자의 비밀글 접근 (비밀번호 확인 불필요): postId={}, authorId={}", id, currentUserId);
-				PostResponse response = toResp(post, currentUserId, false);
-				response.setHasAccess(true);
-				response.setContent(post.getContent());
-				return ResponseEntity.ok(response);
-			}
-			
-			// 작성자가 아닌 경우 비밀번호 확인
-			boolean isValid = postService.verifySecretPassword(id, request.getPassword());
-			
-			if (isValid) {
-				PostResponse response = toResp(post, currentUserId, false);
-				response.setHasAccess(true);
-				response.setContent(post.getContent()); // 실제 내용 설정
-				
-				logger.info("비밀글 비밀번호 확인 성공: postId={}, userId={}", id, currentUserId);
-				return ResponseEntity.ok(response);
-			} else {
-				logger.warn("비밀글 비밀번호 불일치: postId={}, userId={}", id, currentUserId);
-				throw new SecurityException("비밀번호가 일치하지 않습니다");
-			}
-		} catch (SecurityException | IllegalArgumentException e) {
-			throw e;
-		} catch (Exception e) {
-			logger.error("비밀글 비밀번호 확인 중 오류: postId={}", id, e);
-			throw new RuntimeException("비밀번호 확인 중 오류가 발생했습니다");
-		}
+	        @PathVariable Long id,
+	        @Valid @RequestBody SecretPasswordRequest request,
+	        @AuthenticationPrincipal CustomUserDetails userDetails) {
+	    try {
+	        Long currentUserId = userDetails != null ? userDetails.getId() : null;
+	        logger.info("비밀글 비밀번호 확인: postId={}, userId={}", id, currentUserId);
+	        
+	        // 🔧 새로운 메소드 사용하여 비밀번호 확인 후 게시글 반환
+	        Post post = postService.getSecretPostWithPassword(id, request.getPassword(), currentUserId);
+	        
+	        PostResponse response = toResp(post, currentUserId, false);
+	        
+	        logger.info("비밀글 비밀번호 확인 성공: postId={}, userId={}", id, currentUserId);
+	        return ResponseEntity.ok(response);
+	        
+	    } catch (SecurityException | IllegalArgumentException e) {
+	        logger.warn("비밀글 비밀번호 확인 실패: postId={}, error={}", id, e.getMessage());
+	        throw e;
+	    } catch (Exception e) {
+	        logger.error("비밀글 비밀번호 확인 중 오류: postId={}", id, e);
+	        throw new RuntimeException("비밀번호 확인 중 오류가 발생했습니다");
+	    }
 	}
 
 	@PostMapping
@@ -270,46 +217,35 @@ public class PostController {
 
 	// PostResponse 변환 메서드 (현재 사용자 ID 고려, 마스킹 옵션 추가)
 	private PostResponse toResp(Post p, Long currentUserId, boolean maskSecretPosts) {
-		PostResponse r = new PostResponse();
-		r.setId(p.getId());
-		r.setIsSecret(p.getIsSecret());
-		
-		// 작성자 정보 설정
-		if (p.getAuthor() != null) {
-			r.setAuthorId(p.getAuthor().getId());
-			r.setAuthorUsername(p.getAuthor().getUsername());
-		}
-		
-		// 비밀글 처리 로직
-		if (Boolean.TRUE.equals(p.getIsSecret())) {
-			// 작성자인지 확인
-			boolean isAuthor = currentUserId != null && 
-				p.getAuthor() != null && 
-				p.getAuthor().getId().equals(currentUserId);
-			
-			if (isAuthor) {
-				// 작성자는 실제 제목과 내용을 볼 수 있음
-				r.setTitle(p.getTitle());
-				r.setContent(p.getContent());
-				r.setHasAccess(true);
-			} else if (maskSecretPosts) {
-				// 목록에서는 제목과 내용을 모두 숨김
-				r.setTitle("🔐 비밀글");
-				r.setContent("[비밀글입니다. 클릭하여 비밀번호를 입력해주세요.]");
-				r.setHasAccess(false);
-			} else {
-				// 상세 보기나 검색에서는 제목은 보이되 내용만 숨김
-				r.setTitle(p.getTitle());
-				r.setContent("[비밀글입니다. 비밀번호를 입력해주세요.]");
-				r.setHasAccess(false);
-			}
-		} else {
-			// 공개글은 모든 내용 표시
-			r.setTitle(p.getTitle());
-			r.setContent(p.getContent());
-			r.setHasAccess(true);
-		}
-		
-		return r;
+	    PostResponse r = new PostResponse();
+	    r.setId(p.getId());
+	    r.setIsSecret(p.getIsSecret());
+	    
+	    // 🔧 hasAccess 값을 그대로 설정
+	    r.setHasAccess(p.getHasAccess());
+	    
+	    // 작성자 정보 설정
+	    if (p.getAuthor() != null) {
+	        r.setAuthorId(p.getAuthor().getId());
+	        r.setAuthorUsername(p.getAuthor().getUsername());
+	    }
+	    
+	    // 🔧 hasAccess 기반으로 내용 표시 결정
+	    if (Boolean.TRUE.equals(p.getIsSecret()) && !Boolean.TRUE.equals(p.getHasAccess())) {
+	        // 비밀글이고 접근 권한이 없는 경우에만 내용 숨김
+	        if (maskSecretPosts) {
+	            r.setTitle("🔐 비밀글");
+	            r.setContent("[비밀글입니다. 클릭하여 비밀번호를 입력해주세요.]");
+	        } else {
+	            r.setTitle(p.getTitle());
+	            r.setContent("[비밀글입니다. 비밀번호를 입력해주세요.]");
+	        }
+	    } else {
+	        // 공개글이거나 비밀글이지만 접근 권한이 있는 경우
+	        r.setTitle(p.getTitle());
+	        r.setContent(p.getContent());
+	    }
+	    
+	    return r;
 	}
 }

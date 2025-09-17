@@ -49,6 +49,9 @@ public class Post {
 
     @Version
     private Long version;
+    
+    @Transient
+    private Boolean hasAccess = false;
 
     // 기본 생성자
     public Post() {}
@@ -89,6 +92,14 @@ public class Post {
 
     public Long getVersion() { return version; }
     public void setVersion(Long version) { this.version = version; }
+    
+    public Boolean getHasAccess() { 
+        return hasAccess; 
+    }
+    
+    public void setHasAccess(Boolean hasAccess) { 
+        this.hasAccess = hasAccess; 
+    }
 
     // 편의 메소드
     public boolean isSecret() {

@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 
 @Service
+@Transactional // 🔧 클래스 레벨에 @Transactional 추가
 public class PostService {
 
     private static final Logger logger = LoggerFactory.getLogger(PostService.class);
@@ -28,6 +29,7 @@ public class PostService {
     }
 
     // 전체 게시글 목록 조회 (비밀글 포함)
+    @Transactional(readOnly = true)
     public List<Post> listAll() {
         logger.debug("전체 게시글 목록 조회 요청 (비밀글 포함)");
         List<Post> posts = postRepository.findAllWithAuthor();
@@ -35,7 +37,8 @@ public class PostService {
         return posts;
     }
 
-    // 공개글만 검색 (새로 추가)
+    // 공개글만 검색
+    @Transactional(readOnly = true)
     public List<Post> searchPublicPosts(String keyword) {
         if (keyword == null || keyword.trim().isEmpty()) {
             logger.warn("빈 검색어로 공개글 검색 시도");
@@ -51,11 +54,8 @@ public class PostService {
         logger.info("공개글 검색: keyword='{}'", trimmedKeyword);
         
         try {
-            // 공개글만 검색
             List<Post> searchResults = postRepository.findByKeywordPublicWithAuthor(trimmedKeyword);
-            
             logger.info("공개글 검색 완료: keyword='{}', 결과={}개", trimmedKeyword, searchResults.size());
-            
             return searchResults;
         } catch (Exception e) {
             logger.error("공개글 검색 중 오류 발생: keyword='{}'", trimmedKeyword, e);
@@ -63,7 +63,8 @@ public class PostService {
         }
     }
 
-    // 전체 검색 (비밀글 포함) - 기존 메서드 유지 (관리용)
+    // 전체 검색 (비밀글 포함)
+    @Transactional(readOnly = true)
     public List<Post> search(String keyword) {
         if (keyword == null || keyword.trim().isEmpty()) {
             logger.warn("빈 검색어로 검색 시도");
@@ -95,21 +96,48 @@ public class PostService {
         }
     }
 
-    // 게시글 상세 조회
-    public Post get(Long id) {
-        logger.debug("게시글 상세 조회: postId={}", id);
+    // 🔧 게시글 상세 조회 - 완전히 새로 작성
+    @Transactional(readOnly = true)
+    public Post get(Long id, Long currentUserId) {
+        logger.debug("게시글 상세 조회: postId={}, currentUserId={}", id, currentUserId);
+        
+        // JOIN FETCH로 author 정보를 미리 로드
         Post post = postRepository.findByIdWithAuthor(id)
             .orElseThrow(() -> {
                 logger.warn("게시글을 찾을 수 없음: postId={}", id);
                 return new RuntimeException("게시글을 찾을 수 없습니다");
             });
         
-        logger.info("게시글 조회 성공: postId={}, title={}, isSecret={}", 
-                   id, post.getTitle(), post.getIsSecret());
+        // 🔧 hasAccess 설정 로직 개선
+        if (Boolean.TRUE.equals(post.getIsSecret())) {
+            // 비밀글인 경우
+            boolean isAuthor = currentUserId != null && 
+                post.getAuthor() != null && 
+                post.getAuthor().getId().equals(currentUserId);
+            
+            post.setHasAccess(isAuthor); // 작성자면 true, 아니면 false
+            
+            logger.info("비밀글 접근 권한 설정: postId={}, isAuthor={}, hasAccess={}", 
+                       id, isAuthor, post.getHasAccess());
+        } else {
+            // 공개글인 경우 모두 접근 가능
+            post.setHasAccess(true);
+            logger.debug("공개글 접근: postId={}", id);
+        }
+        
+        logger.info("게시글 조회 성공: postId={}, title={}, isSecret={}, hasAccess={}", 
+                   id, post.getTitle(), post.getIsSecret(), post.getHasAccess());
+        
         return post;
     }
 
-    // 비밀글 비밀번호 확인
+    // 🔧 편의 메소드 - currentUserId 없는 버전
+    @Transactional(readOnly = true)
+    public Post get(Long id) {
+        return get(id, null);
+    }
+
+    // 🔧 비밀글 비밀번호 확인 - 수정
     @Transactional(readOnly = true)
     public boolean verifySecretPassword(Long postId, String password) {
         if (password == null || password.trim().isEmpty()) {
@@ -144,8 +172,31 @@ public class PostService {
         return isValid;
     }
 
+    // 🔧 비밀번호 확인 후 게시글 반환 - 새로운 메소드
+    @Transactional(readOnly = true)
+    public Post getSecretPostWithPassword(Long postId, String password, Long currentUserId) {
+        logger.info("비밀글 비밀번호 확인 요청: postId={}, currentUserId={}", postId, currentUserId);
+        
+        // 먼저 비밀번호 확인
+        boolean isValid = verifySecretPassword(postId, password);
+        
+        if (!isValid) {
+            throw new SecurityException("비밀번호가 일치하지 않습니다");
+        }
+        
+        // 비밀번호가 맞으면 게시글을 다시 가져와서 hasAccess를 true로 설정
+        Post post = postRepository.findByIdWithAuthor(postId)
+            .orElseThrow(() -> new RuntimeException("게시글을 찾을 수 없습니다"));
+        
+        // 🔧 비밀번호가 맞으므로 접근 허용
+        post.setHasAccess(true);
+        
+        logger.info("비밀글 비밀번호 확인 완료: postId={}, hasAccess={}", postId, post.getHasAccess());
+        
+        return post;
+    }
+
     // 게시글 생성
-    @Transactional
     public Post create(Long authorId, String title, String content, Boolean isSecret, String secretPassword) {
         if (title == null || title.trim().isEmpty()) {
             throw new IllegalArgumentException("제목은 필수입니다");
@@ -174,15 +225,20 @@ public class PostService {
             logger.info("공개글 생성: authorId={}, title={}", authorId, title);
         }
 
-        return postRepository.save(post);
+        Post savedPost = postRepository.save(post);
+        // 🔧 생성한 게시글은 작성자가 항상 접근 가능
+        savedPost.setHasAccess(true);
+        
+        return savedPost;
     }
 
-    // 게시글 수정
-    @Transactional
+    // 🔧 게시글 수정 - Lazy Loading 문제 해결
     public Post update(Long id, Long authorId, String title, String content, Boolean isSecret, String secretPassword) {
-        Post post = postRepository.findById(id)
+        // JOIN FETCH로 author 정보를 미리 로드
+        Post post = postRepository.findByIdWithAuthor(id)
             .orElseThrow(() -> new RuntimeException("게시글을 찾을 수 없습니다"));
 
+        // 🔧 User 객체가 이미 로드되어 있으므로 안전하게 접근 가능
         if (!post.getAuthor().getId().equals(authorId)) {
             logger.warn("권한 없는 게시글 수정 시도: postId={}, authorId={}, actualAuthorId={}", 
                        id, authorId, post.getAuthor().getId());
@@ -206,7 +262,7 @@ public class PostService {
                 logger.info("비밀글 비밀번호 변경: postId={}", id);
             } else if (!wasSecret) {
                 // 공개글에서 비밀글로 변경하는데 비밀번호가 없는 경우
-                throw new IllegalArgumentException("비밀글에는 비밀번호가 필요합니다");
+                throw new IllegalArgumentException("비밀글로 변경하려면 비밀번호가 필요합니다");
             }
             // 이미 비밀글이고 새 비밀번호가 없으면 기존 비밀번호 유지
         } else {
@@ -217,14 +273,18 @@ public class PostService {
             }
         }
 
+        Post updatedPost = postRepository.save(post);
+        // 🔧 작성자는 수정한 게시글에 항상 접근 가능
+        updatedPost.setHasAccess(true);
+        
         logger.info("게시글 수정 완료: postId={}, isSecret={}", id, willBeSecret);
-        return postRepository.save(post);
+        return updatedPost;
     }
 
     // 게시글 삭제
-    @Transactional
     public void delete(Long id, Long authorId) {
-        Post post = postRepository.findById(id)
+        // JOIN FETCH로 author 정보를 미리 로드
+        Post post = postRepository.findByIdWithAuthor(id)
             .orElseThrow(() -> new RuntimeException("게시글을 찾을 수 없습니다"));
 
         if (!post.getAuthor().getId().equals(authorId)) {

@@ -48,7 +48,7 @@ export default function PostDetail() {
   const shouldShowSecretModal = (post: any) => {
     if (!post?.isSecret) return false; // 공개글은 모달 불필요
     if (isAuthor(post)) return false; // 작성자는 모달 불필요
-    return !post.hasAccess; // 비밀번호 확인 안된 경우만 모달 필요
+    return !post.hasAccess; // hasAccess가 false인 경우에만 모달 필요
   };
 
   // 비밀글 모달 표시 조건 확인 - 작성자가 아닌 경우에만
@@ -65,17 +65,26 @@ export default function PostDetail() {
       return verifySecretPassword(postId, password);
     },
     onSuccess: (verifiedPost) => {
+      // 🔧 쿼리 데이터를 즉시 업데이트
       qc.setQueryData(["post", postId], verifiedPost);
       setShowSecretModal(false);
       setSecretPasswordError("");
     },
     onError: (error: any) => {
       console.error("비밀글 비밀번호 확인 실패:", error);
-      if (error.response?.status === 403 || error.message?.includes("비밀번호")) {
-        setSecretPasswordError("비밀번호가 일치하지 않습니다.");
-      } else {
-        setSecretPasswordError("비밀번호 확인 중 오류가 발생했습니다.");
+      
+      let errorMessage = "비밀번호 확인 중 오류가 발생했습니다.";
+      
+      if (error.response?.status === 403 || 
+          error.response?.status === 401 ||
+          error.message?.includes("비밀번호") ||
+          error.response?.data?.message?.includes("비밀번호")) {
+        errorMessage = "비밀번호가 일치하지 않습니다.";
+      } else if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
       }
+      
+      setSecretPasswordError(errorMessage);
     }
   });
 
@@ -85,7 +94,7 @@ export default function PostDetail() {
       setEditTitle(post.title);
       setEditContent(post.content);
       setEditIsSecret(Boolean(post.isSecret));
-      setEditSecretPassword("");
+      setEditSecretPassword(""); // 항상 빈 문자열로 시작
       setIsEditingPost(true);
     }
   };
@@ -185,25 +194,46 @@ export default function PostDetail() {
 
   // 게시글 수정
   const updatePostMut = useMutation({
-    mutationFn: () => updatePost(postId, { 
-      title: editTitle, 
-      content: editContent,
-      isSecret: editIsSecret,
-      secretPassword: editIsSecret && editSecretPassword.trim() ? editSecretPassword : undefined
-    }),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["post", postId] });
+    mutationFn: () => {
+      const payload: any = { 
+        title: editTitle, 
+        content: editContent,
+        isSecret: editIsSecret
+      };
+      
+      if (editIsSecret && editSecretPassword.trim()) {
+        payload.secretPassword = editSecretPassword.trim();
+      }
+      
+      return updatePost(postId, payload);
+    },
+    onSuccess: (updatedPost) => {
+      // 🔧 쿼리 데이터 업데이트
+      qc.setQueryData(["post", postId], updatedPost);
+      qc.invalidateQueries({ queryKey: ["posts"] });
+      
       setIsEditingPost(false);
       setEditTitle("");
       setEditContent("");
       setEditIsSecret(false);
       setEditSecretPassword("");
     },
-    onError: async (error) => {
+    onError: async (error: any) => {
       console.error("게시글 수정 실패:", error);
+      
+      let errorMessage = "게시글 수정에 실패했습니다.";
+      
+      if (error.message && !error.response) {
+        errorMessage = error.message;
+      } else if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.response?.status === 403) {
+        errorMessage = "작성자만 수정할 수 있습니다.";
+      }
+      
       await showConfirm({
         title: "수정 실패",
-        message: "게시글 수정에 실패했습니다.\n작성자만 수정할 수 있습니다.",
+        message: errorMessage,
         confirmText: "확인",
         type: "danger",
         showCancel: false
@@ -481,8 +511,8 @@ export default function PostDetail() {
 
               <div className="post-detail-body">
                 <div className="post-detail-content">
-                  {/* 작성자는 항상 실제 내용을 볼 수 있음 */}
-                  {post.isSecret && !isAuthor(post) && !post.hasAccess 
+                  {/* hasAccess 기반으로 내용 표시 결정 */}
+                  {post.isSecret && !post.hasAccess 
                     ? "[비밀글입니다. 비밀번호를 입력해주세요.]" 
                     : post.content
                   }
