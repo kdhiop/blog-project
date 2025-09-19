@@ -133,32 +133,40 @@ public class PostController {
 
 	@PostMapping
 	public ResponseEntity<PostResponse> create(
-			@AuthenticationPrincipal CustomUserDetails userDetails,
-			@Valid @RequestBody PostRequest req) {
-		try {
-			if (userDetails == null) {
-				logger.warn("인증되지 않은 사용자의 게시글 작성 시도");
-				throw new SecurityException("로그인이 필요합니다");
-			}
+	        @AuthenticationPrincipal CustomUserDetails userDetails,
+	        @Valid @RequestBody PostRequest req) {
+	    try {
+	        if (userDetails == null) {
+	            logger.warn("인증되지 않은 사용자의 게시글 작성 시도");
+	            throw new SecurityException("로그인이 필요합니다");
+	        }
 
-			logger.info("게시글 작성: userId={}, title={}, isSecret={}", 
-					   userDetails.getId(), req.getTitle(), req.getIsSecret());
-			
-			Post post = postService.create(userDetails.getId(), req.getTitle(), req.getContent(), 
-										   req.getIsSecret(), req.getSecretPassword());
-			
-			// 작성자는 자신의 글에 항상 접근 가능
-			PostResponse response = toResp(post, userDetails.getId(), false);
-			response.setHasAccess(true);
-			response.setContent(post.getContent());
-			
-			return ResponseEntity.ok(response);
-		} catch (SecurityException e) {
-			throw e;
-		} catch (Exception e) {
-			logger.error("게시글 작성 중 오류: {}", e.getMessage(), e);
-			throw new RuntimeException("게시글 작성 중 오류가 발생했습니다");
-		}
+	        logger.info("게시글 작성: userId={}, title={}, isSecret={}", 
+	                   userDetails.getId(), req.getTitle(), req.getIsSecret());
+	        
+	        Post post = postService.create(userDetails.getId(), req.getTitle(), req.getContent(), 
+	                                       req.getIsSecret(), req.getSecretPassword());
+	        
+	        // 🔧 중요: 작성자는 자신의 글에 항상 접근 가능하므로 hasAccess=true로 설정
+	        post.setHasAccess(true);
+	        
+	        // 🔧 PostResponse 변환 시 마스킹하지 않도록 설정
+	        PostResponse response = toResp(post, userDetails.getId(), false);
+	        
+	        // 🔧 확실하게 hasAccess와 내용을 설정
+	        response.setHasAccess(true);
+	        response.setContent(post.getContent()); // 실제 내용 설정
+	        response.setTitle(post.getTitle()); // 실제 제목 설정
+	        
+	        logger.info("게시글 작성 완료: postId={}, hasAccess={}", post.getId(), response.getHasAccess());
+	        
+	        return ResponseEntity.ok(response);
+	    } catch (SecurityException e) {
+	        throw e;
+	    } catch (Exception e) {
+	        logger.error("게시글 작성 중 오류: {}", e.getMessage(), e);
+	        throw new RuntimeException("게시글 작성 중 오류가 발생했습니다");
+	    }
 	}
 
 	@PutMapping("/{id}")
@@ -221,27 +229,43 @@ public class PostController {
 	    r.setId(p.getId());
 	    r.setIsSecret(p.getIsSecret());
 	    
-	    // 🔧 hasAccess 값을 그대로 설정
-	    r.setHasAccess(p.getHasAccess());
-	    
 	    // 작성자 정보 설정
 	    if (p.getAuthor() != null) {
 	        r.setAuthorId(p.getAuthor().getId());
 	        r.setAuthorUsername(p.getAuthor().getUsername());
 	    }
 	    
-	    // 🔧 hasAccess 기반으로 내용 표시 결정
-	    if (Boolean.TRUE.equals(p.getIsSecret()) && !Boolean.TRUE.equals(p.getHasAccess())) {
-	        // 비밀글이고 접근 권한이 없는 경우에만 내용 숨김
-	        if (maskSecretPosts) {
-	            r.setTitle("🔐 비밀글");
-	            r.setContent("[비밀글입니다. 클릭하여 비밀번호를 입력해주세요.]");
-	        } else {
+	    // 🔧 작성자 여부 확인
+	    boolean isAuthor = currentUserId != null && 
+	        p.getAuthor() != null && 
+	        p.getAuthor().getId().equals(currentUserId);
+	    
+	    // 🔧 hasAccess 설정 로직 개선
+	    if (Boolean.TRUE.equals(p.getIsSecret())) {
+	        if (isAuthor) {
+	            // 작성자는 항상 접근 가능
+	            r.setHasAccess(true);
 	            r.setTitle(p.getTitle());
-	            r.setContent("[비밀글입니다. 비밀번호를 입력해주세요.]");
+	            r.setContent(p.getContent());
+	        } else if (Boolean.TRUE.equals(p.getHasAccess())) {
+	            // 비밀번호를 입력해서 접근 권한을 얻은 경우
+	            r.setHasAccess(true);
+	            r.setTitle(p.getTitle());
+	            r.setContent(p.getContent());
+	        } else {
+	            // 접근 권한이 없는 비밀글
+	            r.setHasAccess(false);
+	            if (maskSecretPosts) {
+	                r.setTitle("🔐 비밀글");
+	                r.setContent("[비밀글입니다. 클릭하여 비밀번호를 입력해주세요.]");
+	            } else {
+	                r.setTitle(p.getTitle());
+	                r.setContent("[비밀글입니다. 비밀번호를 입력해주세요.]");
+	            }
 	        }
 	    } else {
-	        // 공개글이거나 비밀글이지만 접근 권한이 있는 경우
+	        // 공개글은 모든 내용 표시
+	        r.setHasAccess(true);
 	        r.setTitle(p.getTitle());
 	        r.setContent(p.getContent());
 	    }

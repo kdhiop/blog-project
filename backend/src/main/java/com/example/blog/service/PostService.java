@@ -197,6 +197,7 @@ public class PostService {
     }
 
     // 게시글 생성
+    @Transactional
     public Post create(Long authorId, String title, String content, Boolean isSecret, String secretPassword) {
         if (title == null || title.trim().isEmpty()) {
             throw new IllegalArgumentException("제목은 필수입니다");
@@ -226,8 +227,12 @@ public class PostService {
         }
 
         Post savedPost = postRepository.save(post);
-        // 🔧 생성한 게시글은 작성자가 항상 접근 가능
+        
+        // 🔧 중요: 작성자는 항상 자신의 글에 접근 가능하도록 설정
         savedPost.setHasAccess(true);
+        
+        logger.info("게시글 생성 완료: postId={}, isSecret={}, hasAccess={}", 
+                   savedPost.getId(), savedPost.getIsSecret(), savedPost.getHasAccess());
         
         return savedPost;
     }
